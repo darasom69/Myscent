@@ -15,4 +15,12 @@ router.post("/api/items", itemActions.add);
 
 /* ************************************************************************* */
 
+import perfumeActions from "./modules/item/perfume/perfumeActions";
+
+router.get("/api/perfumes", perfumeActions.browse);
+router.get("/api/perfumes/:id", perfumeActions.read);
+router.post("/api/perfumes", perfumeActions.add);
+router.put("/api/perfumes/:id", perfumeActions.update);
+router.delete("/api/perfumes/:id", perfumeActions.destroy);
+
 export default router;
