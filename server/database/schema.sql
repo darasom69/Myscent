@@ -14,6 +14,13 @@ CREATE TABLE gender (
     name VARCHAR(50) NOT NULL UNIQUE -- 'masculine', 'feminine', 'unisex'
 );
 
+--Table : Brand
+CREATE TABLE IF NOT EXISTS brand (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
 -- TABLE: Perfume
 CREATE TABLE perfume (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -67,3 +74,7 @@ CREATE TABLE user_collection (
     FOREIGN KEY (perfume_id) REFERENCES perfume(id) ON DELETE CASCADE
 );
 
+
+INSERT INTO "public"."gender" ("id", "name") VALUES ('1', 'Feminin'), ('2', 'Masculin '), ('3', 'Mixte');
+
+INSERT INTO "public"."olfactory_note" ("id", "name") VALUES ('1', 'Notes de Tête'), ('2', 'Notes de Coeur'), ('3', 'Notes de Fond');
