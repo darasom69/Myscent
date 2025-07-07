@@ -66,3 +66,4 @@ CREATE TABLE user_collection (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (perfume_id) REFERENCES perfume(id) ON DELETE CASCADE
 );
+
