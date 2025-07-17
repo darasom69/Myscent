@@ -1,7 +1,8 @@
-import type { ResultSetHeader } from "mysql2";
 import databaseClient from "../../../database/client";
+import type { Result, Rows } from "../../../database/client";
 
 interface Perfume {
+  id: number;
   name: string;
   brand_id: number;
   release_year: number;
@@ -10,104 +11,74 @@ interface Perfume {
   description?: string | null;
 }
 
-const browse = async () => {
-  const [rows] = await databaseClient.query(
-    `
-    SELECT
-      p.id,
-      p.name,
-      p.release_year,
-      p.image_url,
-      p.description,
-      b.name AS brand,
-      g.name AS gender
-    FROM perfume AS p
-    JOIN brand AS b ON p.brand_id = b.id
-    JOIN gender AS g ON p.gender_id = g.id
-    ORDER BY p.name ASC
-    `,
-  );
-  return rows;
-};
+class PerfumeRepository {
+  // Le C du CRUD - Create
+  async create(perfume: Omit<Perfume, "id">) {
+    // Création d'un nouveau parfum
+    const [result] = await databaseClient.query<Result>(
+      "INSERT INTO perfume (name, brand_id, release_year, gender_id, image_url, description) values (?, ?, ?, ?, ?, ?)",
+      [
+        perfume.name,
+        perfume.brand_id,
+        perfume.release_year,
+        perfume.gender_id,
+        perfume.image_url ?? null,
+        perfume.description ?? null,
+      ],
+    );
+    //Retourne l'ID du nouveau parfum inséré
+    return result.insertId;
+  }
+  // Le R du CRUD - Read
+  async read(id: number) {
+    // Execute la requête SQL pour lire un item spécifique par son ID
+    const [rows] = await databaseClient.query<Rows>(
+      "select * from perfume where id = ?",
+      [id],
+    );
+    //Retourne la première ligne du résultat de la requête
+    return (rows as Perfume[])[0] || null;
+  }
+  async browse() {
+    // Exécute la requête SQL pour lire tout le tableau de la table "perfume"
+    const [rows] = await databaseClient.query<Rows>(
+      "select * from perfume ORDER BY name ASC",
+    );
 
-const read = async (id: number) => {
-  const [rows] = await databaseClient.query(
-    `
-    SELECT
-      p.id,
-      p.name,
-      p.release_year,
-      p.image_url,
-      p.description,
-      b.name AS brand,
-      g.name AS gender
-    FROM perfume AS p
-    JOIN brand AS b ON p.brand_id = b.id
-    JOIN gender AS g ON p.gender_id = g.id
-    WHERE p.id = ?
-    `,
-    [id],
-  );
-  return (rows as Perfume[])[0] || null;
-};
+    // Return the array of items
+    return rows as Perfume[];
+  }
 
-const create = async (perfume: Perfume) => {
-  const [result] = await databaseClient.query<ResultSetHeader>(
-    `
-    INSERT INTO perfume
-      (name, brand_id, release_year, gender_id, image_url, description)
-    VALUES (?, ?, ?, ?, ?, ?)
-    `,
-    [
-      perfume.name,
-      perfume.brand_id,
-      perfume.release_year,
-      perfume.gender_id,
-      perfume.image_url ?? null,
-      perfume.description ?? null,
-    ],
-  );
-  return result.insertId;
-};
+  // Le U du CRUD - Update
+  async update(id: number, perfume: Omit<Perfume, "id">) {
+    // Exécute la requête SQL pour lire tout le tableau de la table "perfume"
+    const [result] = await databaseClient.query<Result>(
+      "UPDATE perfume set name = ?, brand_id = ?, release_year = ?, gender_id = ?, image_url = ?, description = ? WHERE id = ?",
+      [
+        perfume.name,
+        perfume.brand_id,
+        perfume.release_year,
+        perfume.gender_id,
+        perfume.image_url ?? null,
+        perfume.description ?? null,
+        id,
+      ],
+    );
 
-const update = async (id: number, perfume: Perfume) => {
-  const [result] = await databaseClient.query<ResultSetHeader>(
-    `
-    UPDATE perfume
-    SET
-      name = ?,
-      brand_id = ?,
-      release_year = ?,
-      gender_id = ?,
-      image_url = ?,
-      description = ?
-    WHERE id = ?
-    `,
-    [
-      perfume.name,
-      perfume.brand_id,
-      perfume.release_year,
-      perfume.gender_id,
-      perfume.image_url ?? null,
-      perfume.description ?? null,
-      id,
-    ],
-  );
-  return result.affectedRows > 0;
-};
+    // Retourne le tableau de parfums mis à jour
 
-const deletePerfume = async (id: number) => {
-  const [result] = await databaseClient.query<ResultSetHeader>(
-    "DELETE FROM perfume WHERE id = ?",
-    [id],
-  );
-  return result.affectedRows > 0;
-};
+    return result.affectedRows;
+  }
+  // Le D du CRUD - destroy
+  async destroy(id: number) {
+    // Exécute la requête SQL pour supprimer un parfum spécifique par son ID
+    const [result] = await databaseClient.query<Result>(
+      "DELETE FROM perfume WHERE id = ?",
+      [id],
+    );
+    // Retourne le nombre de lignes affectées par la suppression
+    return result.affectedRows;
+  }
+}
 
-export default {
-  browse,
-  read,
-  create,
-  update,
-  delete: deletePerfume,
-};
+export default new PerfumeRepository();
