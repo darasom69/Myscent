@@ -4,7 +4,7 @@ import perfumeRepository from "./perfumeRepository";
 // GET /perfumes
 const browse: RequestHandler = async (req, res, next) => {
   try {
-    const perfumes = await perfumeRepository.readAll();
+    const perfumes = await perfumeRepository.browse();
     res.status(200).json(perfumes);
   } catch (error) {
     next(error);
@@ -35,16 +35,10 @@ const read: RequestHandler = async (req, res, next) => {
 // POST /perfumes
 const add: RequestHandler = async (req, res, next) => {
   try {
-    const {
-      name,
-      brand_id,
-      release_year,
-      main_gender_id,
-      perceived_gender_id,
-      image_url,
-    } = req.body;
+    const { name, brand_id, release_year, gender_id, image_url, description } =
+      req.body;
 
-    if (!name || !brand_id || !release_year || !main_gender_id) {
+    if (!name || !brand_id || !release_year || !gender_id) {
       res.status(400).json({ error: "Champs requis manquants" });
       return;
     }
@@ -53,9 +47,9 @@ const add: RequestHandler = async (req, res, next) => {
       name,
       brand_id,
       release_year,
-      main_gender_id,
-      perceived_gender_id: perceived_gender_id ?? null,
+      gender_id,
       image_url: image_url ?? null,
+      description: description ?? null,
     });
 
     res.status(201).json({ insertId });
@@ -73,22 +67,16 @@ const update: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    const {
-      name,
-      brand_id,
-      release_year,
-      main_gender_id,
-      perceived_gender_id,
-      image_url,
-    } = req.body;
+    const { name, brand_id, release_year, gender_id, image_url, description } =
+      req.body;
 
     const updated = await perfumeRepository.update(perfumeId, {
       name,
       brand_id,
       release_year,
-      main_gender_id,
-      perceived_gender_id: perceived_gender_id ?? null,
+      gender_id,
       image_url: image_url ?? null,
+      description: description ?? null,
     });
 
     if (!updated) {

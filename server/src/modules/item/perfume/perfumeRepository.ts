@@ -5,21 +5,47 @@ interface Perfume {
   name: string;
   brand_id: number;
   release_year: number;
-  main_gender_id: number;
-  perceived_gender_id?: number | null;
+  gender_id: number;
   image_url?: string | null;
+  description?: string | null;
 }
 
-const readAll = async () => {
+const browse = async () => {
   const [rows] = await databaseClient.query(
-    "SELECT * FROM perfume ORDER BY name ASC",
+    `
+    SELECT
+      p.id,
+      p.name,
+      p.release_year,
+      p.image_url,
+      p.description,
+      b.name AS brand,
+      g.name AS gender
+    FROM perfume AS p
+    JOIN brand AS b ON p.brand_id = b.id
+    JOIN gender AS g ON p.gender_id = g.id
+    ORDER BY p.name ASC
+    `,
   );
   return rows;
 };
 
 const read = async (id: number) => {
   const [rows] = await databaseClient.query(
-    "SELECT * FROM perfume WHERE id = ?",
+    `
+    SELECT
+      p.id,
+      p.name,
+      p.release_year,
+      p.image_url,
+      p.description,
+      b.name AS brand,
+      g.name AS gender
+    FROM perfume AS p
+    JOIN brand AS b ON p.brand_id = b.id
+    JOIN gender AS g ON p.gender_id = g.id
+    WHERE p.id = ?
+    `,
     [id],
   );
   return (rows as Perfume[])[0] || null;
@@ -27,16 +53,18 @@ const read = async (id: number) => {
 
 const create = async (perfume: Perfume) => {
   const [result] = await databaseClient.query<ResultSetHeader>(
-    `INSERT INTO perfume
-     (name, brand_id, release_year, main_gender_id, perceived_gender_id, image_url)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `
+    INSERT INTO perfume
+      (name, brand_id, release_year, gender_id, image_url, description)
+    VALUES (?, ?, ?, ?, ?, ?)
+    `,
     [
       perfume.name,
       perfume.brand_id,
       perfume.release_year,
-      perfume.main_gender_id,
-      perfume.perceived_gender_id || null,
-      perfume.image_url || null,
+      perfume.gender_id,
+      perfume.image_url ?? null,
+      perfume.description ?? null,
     ],
   );
   return result.insertId;
@@ -44,21 +72,24 @@ const create = async (perfume: Perfume) => {
 
 const update = async (id: number, perfume: Perfume) => {
   const [result] = await databaseClient.query<ResultSetHeader>(
-    `UPDATE perfume SET
-     name = ?,
-     brand_id = ?,
-     release_year = ?,
-     main_gender_id = ?,
-     perceived_gender_id = ?,
-     image_url = ?
-     WHERE id = ?`,
+    `
+    UPDATE perfume
+    SET
+      name = ?,
+      brand_id = ?,
+      release_year = ?,
+      gender_id = ?,
+      image_url = ?,
+      description = ?
+    WHERE id = ?
+    `,
     [
       perfume.name,
       perfume.brand_id,
       perfume.release_year,
-      perfume.main_gender_id,
-      perfume.perceived_gender_id || null,
-      perfume.image_url || null,
+      perfume.gender_id,
+      perfume.image_url ?? null,
+      perfume.description ?? null,
       id,
     ],
   );
@@ -74,7 +105,7 @@ const deletePerfume = async (id: number) => {
 };
 
 export default {
-  readAll,
+  browse,
   read,
   create,
   update,
