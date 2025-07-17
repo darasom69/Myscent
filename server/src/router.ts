@@ -15,7 +15,7 @@ router.post("/api/items", itemActions.add);
 
 /* ************************************************************************* */
 
-import perfumeActions from "./modules/item/perfume/perfumeActions";
+import perfumeActions from "./modules/perfume/perfumeActions";
 
 router.get("/api/perfumes", perfumeActions.browse);
 router.get("/api/perfumes/:id", perfumeActions.read);
