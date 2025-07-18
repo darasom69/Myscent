@@ -123,4 +123,20 @@ const destroy: RequestHandler = async (req, res, next) => {
   }
 };
 
-export default { browse, read, add, destroy, update };
+// Recherche par nom ou marque
+const search: RequestHandler = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (typeof q !== "string" || q.trim() === "") {
+      res.status(400).json({ error: "Paramètre de recherche manquant" });
+      return;
+    }
+
+    const perfumes = await perfumeRepository.search(q.trim());
+    res.status(200).json(perfumes);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export default { browse, read, add, destroy, update, search };
