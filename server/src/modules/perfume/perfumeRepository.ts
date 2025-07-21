@@ -79,6 +79,19 @@ class PerfumeRepository {
     // Retourne le nombre de lignes affectées par la suppression
     return result.affectedRows;
   }
+
+  // Recherche de parfums par nom ou par marque
+  async search(query: string) {
+    const [rows] = await databaseClient.query<Rows>(
+      `SELECT p.*
+     FROM perfume p
+     JOIN brand b ON p.brand_id = b.id
+     WHERE p.name LIKE ? OR b.name LIKE ?
+     ORDER BY p.name ASC`,
+      [`%${query}%`, `%${query}%`],
+    );
+    return rows as Perfume[];
+  }
 }
 
 export default new PerfumeRepository();
