@@ -47,11 +47,30 @@ class UsersRepository {
   }
 
   // Mettre à jour un utilisateur (ex: admin modifie role)
-  async update(id: number, updates: Partial<Omit<User, "id" | "created_at">>) {
+  async update(id: number, partialUser: Partial<User>) {
+    // On récupère l'utilisateur existant
+    const [rows] = await databaseClient.query<Rows>(
+      "SELECT * FROM users WHERE id = ?",
+      [id],
+    );
+    const existingUser = (rows as User[])[0];
+
+    if (!existingUser) {
+      throw new Error("Utilisateur introuvable");
+    }
+
+    // On fusionne les données existantes et les nouvelles
+    const updatedUser = {
+      username: partialUser.username ?? existingUser.username,
+      email: partialUser.email ?? existingUser.email,
+      role: partialUser.role ?? existingUser.role,
+    };
+
     const [result] = await databaseClient.query<Result>(
       "UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?",
-      [updates.username, updates.email, updates.role, id],
+      [updatedUser.username, updatedUser.email, updatedUser.role, id],
     );
+
     return result.affectedRows;
   }
 

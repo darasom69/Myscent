@@ -3,11 +3,11 @@ import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import usersRepository from "./usersRepository";
 
-// 🔹 Environnement secret pour JWT
+// Environnement secret pour JWT
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
 // REGISTER
-export const register: RequestHandler = async (req, res, next) => {
+const register: RequestHandler = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
@@ -32,7 +32,7 @@ export const register: RequestHandler = async (req, res, next) => {
 };
 
 // LOGIN
-export const login: RequestHandler = async (req, res, next) => {
+const login: RequestHandler = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -70,7 +70,7 @@ export const login: RequestHandler = async (req, res, next) => {
 };
 
 // BROWSE (Admin)
-export const browse: RequestHandler = async (req, res, next) => {
+const browse: RequestHandler = async (req, res, next) => {
   try {
     const users = await usersRepository.browse();
     res.json(users);
@@ -80,7 +80,7 @@ export const browse: RequestHandler = async (req, res, next) => {
 };
 
 // READ (Admin)
-export const read: RequestHandler = async (req, res, next) => {
+const read: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const user = await usersRepository.read(id);
@@ -95,7 +95,7 @@ export const read: RequestHandler = async (req, res, next) => {
 };
 
 //  UPDATE (Admin)
-export const update: RequestHandler = async (req, res, next) => {
+const update: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const { username, email, role } = req.body;
@@ -116,7 +116,7 @@ export const update: RequestHandler = async (req, res, next) => {
 };
 
 // DELETE (Admin)
-export const destroy: RequestHandler = async (req, res, next) => {
+const destroy: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const affectedRows = await usersRepository.delete(id);

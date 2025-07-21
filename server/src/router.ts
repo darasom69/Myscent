@@ -7,14 +7,6 @@ import olfactoryFamilyActions from "./modules/olfactoryFamily/olfactoryFamilyAct
 import olfactoryNoteActions from "./modules/olfactoryNote/olfactoryNoteActions";
 import perfumeActions from "./modules/perfume/perfumeActions";
 import userActions from "./modules/users/usersActions";
-import {
-  browse,
-  destroy,
-  login,
-  read,
-  register,
-  update,
-} from "./modules/users/usersActions";
 
 const router = express.Router();
 
@@ -51,13 +43,23 @@ router.get("/api/olfactory-notes", olfactoryNoteActions.browse);
 router.get("/api/olfactory-notes/:id", olfactoryNoteActions.read);
 
 // Auth / Users
-router.post("/api/users/register", register);
-router.post("/api/users/login", login);
+router.post("/api/users/register", userActions.register);
+router.post("/api/users/login", userActions.login);
 
 // Admin uniquement, gestion des users protégée par authenticateToken et requireAdmin
-router.get("/api/users", authenticateToken, requireAdmin, browse);
-router.get("/api/users/:id", authenticateToken, requireAdmin, read);
-router.put("/api/users/:id", authenticateToken, requireAdmin, update);
-router.delete("/api/users/:id", authenticateToken, requireAdmin, destroy);
+router.get("/api/users", authenticateToken, requireAdmin, userActions.browse);
+router.get("/api/users/:id", authenticateToken, requireAdmin, userActions.read);
+router.put(
+  "/api/users/:id",
+  authenticateToken,
+  requireAdmin,
+  userActions.update,
+);
+router.delete(
+  "/api/users/:id",
+  authenticateToken,
+  requireAdmin,
+  userActions.destroy,
+);
 
 export default router;
