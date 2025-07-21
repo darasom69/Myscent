@@ -18,6 +18,7 @@ import {
 
 const router = express.Router();
 
+
 // Item
 router.get("/api/items", itemActions.browse);
 router.get("/api/items/:id", itemActions.read);
@@ -50,17 +51,11 @@ router.get("/api/olfactory-families/:id", olfactoryFamilyActions.read);
 router.get("/api/olfactory-notes", olfactoryNoteActions.browse);
 router.get("/api/olfactory-notes/:id", olfactoryNoteActions.read);
 
-// Users
-router.get("/api/users", userActions.browse);
-router.get("/api/users/:id", userActions.read);
-router.put("/api/users/:id", userActions.update);
-router.delete("/api/users/:id", userActions.destroy);
-
-// Auth
+// Auth / Users
 router.post("/api/users/register", register);
 router.post("/api/users/login", login);
 
-// Admin uniquement
+// Admin uniquement, gestion des users protégée par authenticateToken et requireAdmin
 router.get("/api/users", authenticateToken, requireAdmin, browse);
 router.get("/api/users/:id", authenticateToken, requireAdmin, read);
 router.put("/api/users/:id", authenticateToken, requireAdmin, update);
