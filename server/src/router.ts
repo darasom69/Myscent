@@ -18,7 +18,6 @@ import {
 
 const router = express.Router();
 
-
 // Item
 router.get("/api/items", itemActions.browse);
 router.get("/api/items/:id", itemActions.read);
