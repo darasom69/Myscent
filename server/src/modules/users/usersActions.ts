@@ -6,7 +6,7 @@ import usersRepository from "./usersRepository";
 // 🔹 Environnement secret pour JWT
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-// -------- REGISTER --------
+// REGISTER
 export const register: RequestHandler = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
@@ -31,7 +31,7 @@ export const register: RequestHandler = async (req, res, next) => {
   }
 };
 
-// -------- LOGIN --------
+// LOGIN
 export const login: RequestHandler = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -69,7 +69,7 @@ export const login: RequestHandler = async (req, res, next) => {
   }
 };
 
-// -------- BROWSE (Admin) --------
+// BROWSE (Admin)
 export const browse: RequestHandler = async (req, res, next) => {
   try {
     const users = await usersRepository.browse();
@@ -79,7 +79,7 @@ export const browse: RequestHandler = async (req, res, next) => {
   }
 };
 
-// -------- READ (Admin) --------
+// READ (Admin)
 export const read: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -94,7 +94,7 @@ export const read: RequestHandler = async (req, res, next) => {
   }
 };
 
-// -------- UPDATE (Admin) --------
+//  UPDATE (Admin)
 export const update: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -115,7 +115,7 @@ export const update: RequestHandler = async (req, res, next) => {
   }
 };
 
-// -------- DELETE (Admin) --------
+// DELETE (Admin)
 export const destroy: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
