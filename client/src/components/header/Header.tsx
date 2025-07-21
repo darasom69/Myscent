@@ -2,11 +2,11 @@ import { User } from "lucide-react";
 
 function Header() {
   return (
-    <header className="bg-[url('/Fond.png')] bg-cover bg-center h-20 flex items-center justify-between px-6 shadow-md">
+    <section className="bg-[url('/Fond.png')] bg-cover bg-center h-20 flex items-center justify-between px-6 shadow-md">
       {/* Logo */}
-      <div className="flex items-center space-x-3">
+      <section className="flex items-center space-x-15">
         <img className="h-20" src="/Myscent.png" alt="logo Myscent" />
-      </div>
+      </section>
 
       {/* Navigation */}
       <nav className="flex items-center space-x-8 text-lg font-medium">
@@ -31,12 +31,12 @@ function Header() {
       </nav>
 
       {/* User Icon */}
-      <div>
+      <section>
         <button type="button" className="p-2 hover:bg-black/10 rounded-full">
           <User size={22} />
         </button>
-      </div>
-    </header>
+      </section>
+    </section>
   );
 }
 

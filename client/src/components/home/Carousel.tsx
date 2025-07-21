@@ -1,28 +1,56 @@
+import { EffectCoverflow } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
 import { usePerfumeContext } from "../../context/PerfumeContext";
 
-export default function CarouselPerfumes() {
+import "swiper/css";
+import "swiper/css/effect-coverflow";
+
+function CarouselPerfumes() {
   const { perfumes } = usePerfumeContext();
 
+  // On sélectionne les 10 premiers par exemple
+  const featuredPerfumes = perfumes.slice(0, 10);
+
   return (
-    <section className="w-full bg-[#fdf8f4] py-6">
-      <h2 className="text-center text-lg font-serif mb-6">
+    <section className="min-h-screen bg-primary py-10">
+      <h2 className="text-center text-xl font-serif mb-8">
         Découvre le Parfum qui vous ressemble
       </h2>
-      <div className="flex gap-6 overflow-x-auto px-6 scrollbar-hide">
-        {perfumes.map((p) => (
-          <div
-            key={p.id}
-            className="flex-shrink-0 w-32 flex flex-col items-center"
-          >
+
+      <Swiper
+        effect={"coverflow"}
+        grabCursor={true}
+        centeredSlides={true}
+        slidesPerView={5} //  5 visibles en même temps
+        loop={true} //  boucle infinie
+        spaceBetween={30} //  espace entre slides
+        coverflowEffect={{
+          rotate: 0,
+          stretch: 0,
+          depth: 200,
+          modifier: 2.5,
+          slideShadows: false,
+        }}
+        pagination={{ clickable: true }}
+        modules={[EffectCoverflow]}
+        className="mySwiper"
+      >
+        {featuredPerfumes.map((p) => (
+          <SwiperSlide key={p.id} className="flex flex-col items-center">
             <img
               src={p.image_url ?? "/placeholder.png"}
               alt={p.name}
-              className="w-24 h-24 object-contain mb-2"
+              className="w-32 h-32 object-contain"
             />
-            <p className="text-sm text-center">{p.name}</p>
-          </div>
+            <p className="mt-2 text-center text-sm">{p.name}</p>
+          </SwiperSlide>
         ))}
-      </div>
+      </Swiper>
+      <section className="flex justify-center">
+        <img src="/Socle.png" alt="Socle" className="h-50" />
+      </section>
     </section>
   );
 }
+
+export default CarouselPerfumes;
