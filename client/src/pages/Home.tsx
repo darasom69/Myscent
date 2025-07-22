@@ -1,3 +1,4 @@
+import BrandInfo from "../components/home/BrandInfo";
 import Carousel from "../components/home/Carousel";
 import SearchBar from "../components/home/SearchBar";
 
@@ -6,6 +7,8 @@ function Home() {
     <div>
       <SearchBar />
       <Carousel />
+      <BrandInfo />
+
       <section className="bg-primary grid grid-cols-2 md:grid-cols-4 gap-6 my-10 px-6 text-center">
         <div>
           <img
