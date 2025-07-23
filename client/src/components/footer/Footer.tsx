@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+
 function Footer() {
   return (
     <section className="bg-[url('/Fond.png')] bg-cover bg-center px-6 py-8 text-sm">
@@ -32,14 +34,22 @@ function Footer() {
           </p>
         </section>
       </section>
-
+      <div className="my-8 h-px bg-gray-200" />
       {/* Bas de page */}
-      <section className="mt-6 pt-4 text-center border-t border-black text-xs text-gray-700">
-        Images utilisées uniquement à des fins pédagogiques. Ce projet n'est pas
-        destiné à une diffusion publique ni commerciale.
-      </section>
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-center"
+      >
+        <p className="text-gray-500 text-sm leading-relaxed">
+          © 2025 MyScent. Tous droits réservés.
+          <br />
+          Images utilisées uniquement à des fins pédagogiques. Ce projet n'est
+          pas destiné à une diffusion publique ni commerciale.
+        </p>
+      </motion.div>
     </section>
   );
 }
-
 export default Footer;
