@@ -1,9 +1,13 @@
 import { User } from "lucide-react";
 import { useState } from "react";
 import AuthModal from "../header/AuthModal";
+import RegisterModal from "../header/RegistreModal";
 
 function Header() {
-  const [showAuth, setShowAuth] = useState(false);
+  const [modal, setModal] = useState<null | "login" | "register">(null);
+
+  // Tu peux aussi utiliser le contexte User pour afficher le nom de l'utilisateur connecté
+  // const { user, logout } = useUserContext();
 
   return (
     <>
@@ -26,11 +30,11 @@ function Header() {
           </a>
         </nav>
 
-        {/* User Icon */}
+        {/* User Icon (connexion/compte) */}
         <div>
           <button
             type="button"
-            onClick={() => setShowAuth(true)}
+            onClick={() => setModal("login")}
             className="p-2 hover:bg-black/10 rounded-full"
           >
             <User size={22} />
@@ -38,8 +42,19 @@ function Header() {
         </div>
       </header>
 
-      {/* Pop up */}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {/* --- Modales --- */}
+      {modal === "login" && (
+        <AuthModal
+          onClose={() => setModal(null)}
+          onSwitchToRegister={() => setModal("register")}
+        />
+      )}
+      {modal === "register" && (
+        <RegisterModal
+          onClose={() => setModal(null)}
+          onSwitchToLogin={() => setModal("login")}
+        />
+      )}
     </>
   );
 }

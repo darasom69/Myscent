@@ -1,13 +1,14 @@
 import { User, X } from "lucide-react";
 import { useState } from "react";
-import { useUserContext } from "../../context/UserContext";
+import { useAuthContext } from "../../context/AuthContext";
 
-type AuthModalProps = {
+interface AuthModalProps {
   onClose: () => void;
-};
+  onSwitchToRegister: () => void; // Ajoutez cette ligne
+}
 
-function AuthModal({ onClose }: AuthModalProps) {
-  const { login } = useUserContext();
+function AuthModal({ onClose, onSwitchToRegister }: AuthModalProps) {
+  const { login } = useAuthContext();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -94,6 +95,7 @@ function AuthModal({ onClose }: AuthModalProps) {
           <br />
           <button
             type="button"
+            onClick={onSwitchToRegister}
             className="underline hover:text-black font-semibold"
             // Ici tu pourras gérer l’affichage du form d’inscription
           >

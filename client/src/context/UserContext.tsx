@@ -1,101 +1,102 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type User = {
   id: number;
   username: string;
+  email: string;
   role: "user" | "admin";
 };
 
+type NewUser = {
+  username: string;
+  email: string;
+  password: string;
+  role?: "user" | "admin";
+};
+
 type UserContextType = {
-  user: User | null;
-  token: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  isAdmin: boolean;
-  isAuthenticated: boolean;
+  users: User[];
+  fetchUsers: () => Promise<void>;
+  deleteUser: (id: number) => Promise<void>;
+  updateUser: (id: number, data: Partial<User>) => Promise<void>;
+  createUser: (newUser: NewUser) => Promise<void>;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+  const [users, setUsers] = useState<User[]>([]);
 
-  // Charger depuis localStorage au montage
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
-    }
+  // Récupération des users
+  const fetchUsers = useCallback(async () => {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users`);
+    const data = await res.json();
+    setUsers(data);
   }, []);
 
-  // Sauvegarder automatiquement
-  useEffect(() => {
-    if (user && token) {
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-    }
-  }, [user, token]);
-
-  // Connexion
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/users/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
+  // Créer un utilisateur
+  const createUser = async (newUser: NewUser) => {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/users/register`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(newUser),
+      },
+    );
 
-      if (!res.ok) return false;
-
-      const data = await res.json();
-      setUser(data.user);
-      setToken(data.token);
-      return true;
-    } catch (error) {
-      console.error("Erreur login :", error);
-      return false;
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Erreur création utilisateur: ${errorText}`);
     }
+
+    await fetchUsers(); // mettre à jour la liste après création
   };
 
-  // Déconnexion
-  const logout = () => {
-    setUser(null);
-    setToken(null);
+  // Supprimer un utilisateur
+  const deleteUser = async (id: number) => {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
+      method: "DELETE",
+    });
+    fetchUsers();
   };
+
+  // Modifier un utilisateur
+  const updateUser = async (id: number, data: Partial<User>) => {
+    await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    fetchUsers();
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   return (
     <UserContext.Provider
-      value={{
-        user,
-        token,
-        login,
-        logout,
-        isAdmin: user?.role === "admin",
-        isAuthenticated: !!user,
-      }}
+      value={{ users, fetchUsers, deleteUser, updateUser, createUser }}
     >
       {children}
     </UserContext.Provider>
   );
 };
 
-// Hook personnalisé
 export const useUserContext = () => {
   const context = useContext(UserContext);
-  if (!context) {
+  if (!context)
     throw new Error("useUserContext doit être utilisé dans un UserProvider");
-  }
   return context;
 };
+
+export default UserProvider;
