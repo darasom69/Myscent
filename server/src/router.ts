@@ -6,6 +6,7 @@ import itemActions from "./modules/item/itemActions";
 import olfactoryFamilyActions from "./modules/olfactoryFamily/olfactoryFamilyActions";
 import olfactoryNoteActions from "./modules/olfactoryNote/olfactoryNoteActions";
 import perfumeActions from "./modules/perfume/perfumeActions";
+import reviewActions from "./modules/review/reviewActions";
 import userActions from "./modules/users/usersActions";
 
 const router = express.Router();
@@ -41,6 +42,16 @@ router.get("/api/olfactory-families/:id", olfactoryFamilyActions.read);
 // Olfactory Note
 router.get("/api/olfactory-notes", olfactoryNoteActions.browse);
 router.get("/api/olfactory-notes/:id", olfactoryNoteActions.read);
+
+// Perfume_ notes ( many-to-many relation )
+router.get("/api/perfumes/:id/notes", perfumeActions.getNotesByPerfume);
+
+// Reviews
+router.get("/api/reviews", reviewActions.browse);
+router.get("/api/reviews/perfume/:perfumeId", reviewActions.findByPerfume);
+router.post("/api/reviews", authenticateToken, reviewActions.add);
+router.put("/api/reviews/:id", authenticateToken, reviewActions.update);
+router.delete("/api/reviews/:id", authenticateToken, reviewActions.destroy);
 
 // Auth / Users
 router.post("/api/users/register", userActions.register);
