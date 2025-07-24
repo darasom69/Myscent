@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-// -------- Typage d'un parfum --------
+//  Typage d'un parfum
 export type Perfume = {
   id: number;
   name: string;
@@ -17,7 +17,7 @@ export type Perfume = {
   description?: string | null;
 };
 
-// -------- Typage du contexte --------
+//  Typage du contexte
 type PerfumeContextType = {
   perfumes: Perfume[];
   perfumeSelected: Perfume | null;
@@ -29,10 +29,10 @@ type PerfumeContextType = {
   deletePerfume: (id: number) => Promise<void>;
 };
 
-// -------- Création du contexte --------
+// Création du contexte
 const PerfumeContext = createContext<PerfumeContextType | undefined>(undefined);
 
-// -------- Provider du contexte --------
+// Provider du contexte
 export const PerfumeProvider = ({
   children,
 }: { children: React.ReactNode }) => {
@@ -56,14 +56,14 @@ export const PerfumeProvider = ({
     fetchPerfumes();
   }, []);
 
-  // -------- Méthode pour récupérer tous les parfums --------
+  // Méthode pour récupérer tous les parfums
   const fetchPerfumes = useCallback(async () => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/perfumes`);
     const data = await res.json();
     setPerfumes(data);
   }, []);
 
-  // -------- Méthode pour récupérer un parfum par ID --------
+  // Méthode pour récupérer un parfum par ID
   const getPerfumeById = async (id: number): Promise<Perfume | null> => {
     const res = await fetch(
       `${import.meta.env.VITE_API_URL}/api/perfumes/${id}`,
@@ -73,7 +73,7 @@ export const PerfumeProvider = ({
     return data;
   };
 
-  // -------- Méthode pour créer un parfum --------
+  // Méthode pour créer un parfum
   const createPerfume = async (
     newPerfume: Omit<Perfume, "id">,
   ): Promise<number> => {
@@ -89,7 +89,7 @@ export const PerfumeProvider = ({
     return data.insertId;
   };
 
-  // -------- Méthode pour modifier un parfum --------
+  // Méthode pour modifier un parfum
   const updatePerfume = async (
     id: number,
     updateData: Partial<Perfume>,
@@ -104,7 +104,7 @@ export const PerfumeProvider = ({
     await fetchPerfumes();
   };
 
-  // -------- Méthode pour supprimer un parfum --------
+  // Méthode pour supprimer un parfum
   const deletePerfume = async (id: number): Promise<void> => {
     await fetch(`${import.meta.env.VITE_API_URL}/api/perfumes/${id}`, {
       method: "DELETE",
@@ -130,7 +130,7 @@ export const PerfumeProvider = ({
   );
 };
 
-// -------- Hook personnalisé --------
+// Hook personnalisé
 export const usePerfumeContext = () => {
   const context = useContext(PerfumeContext);
   if (!context) {

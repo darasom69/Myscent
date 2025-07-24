@@ -6,28 +6,30 @@ import {
   useState,
 } from "react";
 
-// -------- Typage d'une marque --------
+// Typage d'une marque
 export type Brand = {
+  image_url: string;
+  description: string;
   id: number;
   name: string;
 };
 
-// -------- Typage du contexte --------
-type BrandContextType = {
+// Typage du contexte
+interface BrandContextType {
   brands: Brand[];
   brandSelected: Brand | null;
   setBrandSelected: (brand: Brand | null) => void;
   fetchBrands: () => Promise<void>;
-  getBrandById: (id: number) => Promise<Brand | null>;
-  createBrand: (brand: Omit<Brand, "id">) => Promise<number>;
-  updateBrand: (id: number, data: Partial<Brand>) => Promise<void>;
+  getBrandById: (id: number) => Brand | null; // <-- ici, pas de Promise
+  createBrand: (newBrand: Omit<Brand, "id">) => Promise<number>;
+  updateBrand: (id: number, updateData: Partial<Brand>) => Promise<void>;
   deleteBrand: (id: number) => Promise<void>;
-};
+}
 
-// -------- Création du contexte --------
+// Création du contexte
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
-// -------- Provider du contexte --------
+// Provider du contexte
 export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [brandSelected, setBrandSelected] = useState<Brand | null>(() => {
@@ -44,7 +46,7 @@ export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [brandSelected]);
 
-  // -------- Récupérer toutes les marques --------
+  // Récupérer toutes les marques
   const fetchBrands = useCallback(async () => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/brands`);
     const data = await res.json();
@@ -56,15 +58,12 @@ export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
     fetchBrands();
   }, [fetchBrands]);
 
-  // -------- Récupérer une marque par ID --------
-  const getBrandById = async (id: number): Promise<Brand | null> => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/brands/${id}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data;
+  //Récupérer une marque par ID
+  const getBrandById = (id: number): Brand | null => {
+    return brands.find((b) => b.id === id) || null;
   };
 
-  // -------- Créer une marque --------
+  // Créer une marque
   const createBrand = async (newBrand: Omit<Brand, "id">): Promise<number> => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/brands`, {
       method: "POST",
@@ -78,7 +77,7 @@ export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
     return data.insertId;
   };
 
-  // -------- Modifier une marque --------
+  // Modifier une marque
   const updateBrand = async (
     id: number,
     updateData: Partial<Brand>,
@@ -93,7 +92,7 @@ export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
     await fetchBrands();
   };
 
-  // -------- Supprimer une marque --------
+  // Supprimer une marque
   const deleteBrand = async (id: number): Promise<void> => {
     await fetch(`${import.meta.env.VITE_API_URL}/api/brands/${id}`, {
       method: "DELETE",
@@ -119,7 +118,7 @@ export const BrandProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// -------- Hook personnalisé --------
+// Hook personnalisé
 export const useBrandContext = () => {
   const context = useContext(BrandContext);
   if (!context) {

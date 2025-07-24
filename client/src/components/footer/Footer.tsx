@@ -1,14 +1,16 @@
+import { motion } from "framer-motion";
+
 function Footer() {
   return (
-    <footer className="bg-[url('/Fond.png')] bg-cover bg-center px-6 py-8 text-sm text-black">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
+    <section className="bg-[url('/Fond.png')] bg-cover bg-center px-6 py-8 text-sm">
+      <section className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
         {/* Bloc centre : Newsletter */}
-        <div className="flex flex-col items-start max-w-md">
+        <section className="flex flex-col items-start max-w-md">
           <h2 className="font-semibold mb-2 text-lg">Newsletter</h2>
           <p className="mb-2">
             Abonnez-vous pour suivre notre actualité olfactive
           </p>
-          <div className="w-full flex items-center border-b border-black">
+          <section className="w-full flex items-center border-b border-black">
             <input
               type="email"
               placeholder="Email"
@@ -20,26 +22,34 @@ function Footer() {
             >
               OK
             </button>
-          </div>
-        </div>
+          </section>
+        </section>
 
         {/* Bloc droit : Liens */}
-        <div className="flex flex-col items-start space-y-1">
+        <section className="flex flex-col items-start space-y-1">
           <p className="hover:underline">Mentions légales</p>
           <p className="hover:underline">Politique de confidentialité</p>
           <p className="hover:underline flex items-center">
             Contactez-nous <span className="ml-1">➔</span>
           </p>
-        </div>
-      </div>
-
+        </section>
+      </section>
+      <div className="my-8 h-px bg-gray-200" />
       {/* Bas de page */}
-      <div className="mt-6 pt-4 text-center border-t border-black text-xs text-gray-700">
-        Images utilisées uniquement à des fins pédagogiques. Ce projet n'est pas
-        destiné à une diffusion publique ni commerciale.
-      </div>
-    </footer>
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-center"
+      >
+        <p className="text-gray-500 text-sm leading-relaxed">
+          © 2025 MyScent. Tous droits réservés.
+          <br />
+          Images utilisées uniquement à des fins pédagogiques. Ce projet n'est
+          pas destiné à une diffusion publique ni commerciale.
+        </p>
+      </motion.div>
+    </section>
   );
 }
-
 export default Footer;
