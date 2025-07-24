@@ -1,5 +1,5 @@
-import PerfumeDetail from "../components/perfumes/PerfumeDetail";
-import Review from "../components/perfumes/Review";
+import PerfumeDetail from "../components/perfume/PerfumeDetail";
+import Review from "../components/perfume/Review";
 
 function Perfume() {
   return (

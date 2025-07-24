@@ -22,7 +22,7 @@ function PerfumeDetail() {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // ---- Fonction pour récupérer les notes ----
+  // Fonction pour récupérer les notes
   const fetchNotes = useCallback(async (perfumeId: number) => {
     try {
       const res = await fetch(

@@ -1,5 +1,6 @@
 import { User } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import AuthModal from "../header/AuthModal";
 import RegisterModal from "../header/RegistreModal";
 
@@ -14,18 +15,20 @@ function Header() {
       <header className="bg-[url('/Fond.png')] bg-cover bg-center h-20 flex items-center justify-between px-6 shadow-md">
         {/* Logo */}
         <div className="flex items-center space-x-15">
-          <img className="h-20" src="/Myscent.png" alt="logo Myscent" />
+          <Link to="/">
+            <img className="h-20" src="/Myscent.png" alt="logo Myscent" />
+          </Link>
         </div>
 
         {/* Navigation */}
         <nav className="flex items-center space-x-12 text-lg font-medium self-end pb-2">
-          <a href="#marque" className="hover:underline">
+          <a href="marque" className="hover:underline">
             Marque
           </a>
-          <a href="#parfum" className="hover:underline">
+          <a href="parfums" className="hover:underline">
             Parfum
           </a>
-          <a href="#quiz" className="hover:underline">
+          <a href="quizz" className="hover:underline">
             Quizz
           </a>
         </nav>
