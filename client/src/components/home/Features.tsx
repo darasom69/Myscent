@@ -48,7 +48,7 @@ const Features: React.FC = () => {
 
   return (
     <motion.div
-      className="w-full py-4 md:py-8"
+      className="w-full py-4 md:py-8 flex flex-col items-center"
       variants={container}
       initial="hidden"
       animate="show"
@@ -71,7 +71,7 @@ const Features: React.FC = () => {
                 transition: { duration: 0.3 },
               }}
             />
-            <div className="w-full [font-family:'Inter',Helvetica] font-normal text-black text-xs text-center">
+            <div className="w-full font-normal text-xs text-center">
               <motion.h3
                 className="font-bold mb-1"
                 whileHover={{ scale: 1.05 }}
@@ -101,7 +101,7 @@ const Features: React.FC = () => {
                 transition: { duration: 0.3 },
               }}
             />
-            <div className="w-[360px] [font-family:'Inter',Helvetica] font-normal text-black text-xs text-center">
+            <div className="w-[360px] font-normal text-xs text-center">
               <motion.h3
                 className="font-bold mb-1"
                 whileHover={{ scale: 1.05 }}
