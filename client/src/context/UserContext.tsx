@@ -33,55 +33,113 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
 
-  // Récupération des users
+  // Récupérer le token du localStorage
+  const token = localStorage.getItem("token");
+
+  //Récupération des utilisateurs
   const fetchUsers = useCallback(async () => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users`);
-    const data = await res.json();
-    setUsers(data);
-  }, []);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
+        headers: {
+          Authorization: `Bearer ${token ?? ""}`,
+        },
+      });
+
+      if (!res.ok) {
+        console.error("Erreur fetchUsers :", res.statusText);
+        return;
+      }
+
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error("Erreur réseau fetchUsers :", err);
+    }
+  }, [token]);
 
   // Créer un utilisateur
   const createUser = async (newUser: NewUser) => {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/users/register`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newUser),
         },
-        body: JSON.stringify(newUser),
-      },
-    );
+      );
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Erreur création utilisateur: ${errorText}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Erreur création utilisateur: ${errorText}`);
+      }
+
+      // Recharger la liste des users si l'utilisateur courant est un admin
+      await fetchUsers();
+    } catch (err) {
+      console.error(err);
+      throw err; // pour que le composant appelant puisse gérer l'erreur
     }
-
-    await fetchUsers(); // mettre à jour la liste après création
   };
 
   // Supprimer un utilisateur
   const deleteUser = async (id: number) => {
-    await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
-      method: "DELETE",
-    });
-    fetchUsers();
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token ?? ""}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        console.error("Erreur suppression utilisateur :", res.statusText);
+        return;
+      }
+
+      await fetchUsers();
+    } catch (err) {
+      console.error("Erreur réseau suppression utilisateur :", err);
+    }
   };
 
   // Modifier un utilisateur
   const updateUser = async (id: number, data: Partial<User>) => {
-    await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    fetchUsers();
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token ?? ""}`,
+          },
+          body: JSON.stringify(data),
+        },
+      );
+
+      if (!res.ok) {
+        console.error("Erreur updateUser :", res.statusText);
+        return;
+      }
+
+      await fetchUsers();
+    } catch (err) {
+      console.error("Erreur réseau updateUser :", err);
+    }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    // On ne fetch que si on a un token valide (admin connecté)
+    if (token) {
+      fetchUsers();
+    }
+  }, [fetchUsers, token]);
 
   return (
     <UserContext.Provider

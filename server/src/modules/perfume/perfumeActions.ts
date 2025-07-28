@@ -1,5 +1,12 @@
 import type { RequestHandler } from "express";
+import type { Request, Response } from "express";
+import client from "../../../database/client";
 import perfumeRepository from "./perfumeRepository";
+
+type NoteRow = {
+  note_type: string;
+  note_name: string;
+};
 
 // Le B du BREAD - Browse (Read All) operation
 const browse: RequestHandler = async (req, res, next) => {
@@ -139,4 +146,47 @@ const search: RequestHandler = async (req, res, next) => {
   }
 };
 
-export default { browse, read, add, destroy, update, search };
+// Récupérer les notes associées à un parfum
+const getNotesByPerfume: RequestHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const perfumeId = Number(req.params.id);
+  if (Number.isNaN(perfumeId)) {
+    res.status(400).json({ error: "ID invalide" });
+    return;
+  }
+  // Requête SQL : jointure entre perfume_note et olfactory_note
+  try {
+    const [rows] = await client.query(
+      `
+      SELECT pn.note_type, oname.name AS note_name
+      FROM perfume_note pn
+      JOIN olfactory_note oname ON pn.note_id = oname.id
+      WHERE pn.perfume_id = ?
+      `,
+      [perfumeId],
+    );
+
+    // Définir le type des lignes SQL
+    const notes = (rows as NoteRow[]).map((row) => ({
+      type: row.note_type,
+      value: row.note_name,
+    }));
+
+    res.status(200).json(notes);
+  } catch (error) {
+    console.error("Erreur récupération notes:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+export default {
+  browse,
+  read,
+  add,
+  destroy,
+  update,
+  search,
+  getNotesByPerfume,
+};

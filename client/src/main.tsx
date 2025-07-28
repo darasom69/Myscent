@@ -4,7 +4,9 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router";
 
 import App from "./App";
+import AllPerfumes from "./pages/AllPerfumes";
 import Home from "./pages/Home";
+import Perfume from "./pages/Perfume";
 
 const router = createBrowserRouter([
   {
@@ -13,6 +15,14 @@ const router = createBrowserRouter([
       {
         path: "/",
         element: <Home />,
+      },
+      {
+        path: "/parfums",
+        element: <AllPerfumes />,
+      },
+      {
+        path: "/parfum/:id",
+        element: <Perfume />,
       },
     ],
   },
