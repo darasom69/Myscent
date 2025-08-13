@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, User } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuthContext } from "../../context/AuthContext";
 import { useBrandContext } from "../../context/BrandContext";
 import AuthModal from "../header/AuthModal";
 import RegisterModal from "../header/RegistreModal";
@@ -9,8 +10,11 @@ import RegisterModal from "../header/RegistreModal";
 function Header() {
   const [modal, setModal] = useState<null | "login" | "register">(null);
   const [openBrands, setOpenBrands] = useState(false);
+  const [openUserMenu, setOpenUserMenu] = useState(false);
+  const navigate = useNavigate();
 
-  const { brands } = useBrandContext(); // tu récupères tes marques depuis ton BrandContext
+  const { isAuthenticated, logout } = useAuthContext();
+  const { brands } = useBrandContext();
 
   return (
     <>
@@ -45,19 +49,49 @@ function Header() {
           </Link>
         </nav>
 
-        {/* User Icon */}
-        <div>
+        {/* User Icon / Dropdown */}
+        <div className="relative">
           <button
             type="button"
-            onClick={() => setModal("login")}
+            onClick={() =>
+              isAuthenticated
+                ? setOpenUserMenu((prev) => !prev)
+                : setModal("login")
+            }
             className="p-2 hover:bg-black/10 rounded-full"
           >
             <User size={22} />
           </button>
+
+          {isAuthenticated && openUserMenu && (
+            <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/moncompte");
+                  setOpenUserMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100"
+              >
+                Mon compte
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  navigate("/");
+                  setOpenUserMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
+              >
+                Déconnexion
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
-      {/* --- Liste des marques déroulante --- */}
+      {/* Dropdown marques */}
       <AnimatePresence>
         {openBrands && (
           <motion.div
@@ -83,7 +117,7 @@ function Header() {
         )}
       </AnimatePresence>
 
-      {/* --- Modales --- */}
+      {/* Modales */}
       {modal === "login" && (
         <AuthModal
           onClose={() => setModal(null)}
