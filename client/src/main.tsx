@@ -7,6 +7,7 @@ import App from "./App";
 import AllPerfumes from "./pages/AllPerfumes";
 import Home from "./pages/Home";
 import Perfume from "./pages/Perfume";
+import UserAccount from "./pages/UserAccount";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       {
         path: "/parfum/:id",
         element: <Perfume />,
+      },
+      {
+        path: "/moncompte",
+        element: <UserAccount />,
       },
     ],
   },
