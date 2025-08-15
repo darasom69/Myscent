@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useAuthContext } from "../../context/AuthContext";
 import { type Brand, useBrandContext } from "../../context/BrandContext";
+import { useCollectionContext } from "../../context/CollectionContext";
 import { type Perfume, usePerfumeContext } from "../../context/PerfumeContext";
 
 type Note = {
@@ -12,76 +13,78 @@ type Note = {
 
 function PerfumeDetail() {
   const { id } = useParams();
+  const perfumeId = Number(id);
+
   const { getPerfumeById } = usePerfumeContext();
   const { getBrandById } = useBrandContext();
   const { isAuthenticated } = useAuthContext();
+  const {
+    ownedIds,
+    testedIds,
+    wishlistIds,
+    addToCollection,
+    removeFromCollection,
+  } = useCollectionContext();
 
   const [perfume, setPerfume] = useState<Perfume | null>(null);
   const [brand, setBrand] = useState<Brand | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
 
-  // Fonction pour récupérer les notes
-  const fetchNotes = useCallback(async (perfumeId: number) => {
+  // Charger les notes du parfum
+  const fetchNotes = useCallback(async (perfumeIdLocal: number) => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/perfumes/${perfumeId}/notes`,
+        `${import.meta.env.VITE_API_URL}/api/perfumes/${perfumeIdLocal}/notes`,
       );
-      if (!res.ok) {
-        throw new Error("Erreur lors de la récupération des notes");
-      }
+      if (!res.ok) throw new Error("Erreur lors de la récupération des notes");
       const data = await res.json();
-      // Vérifie si c'est bien un tableau
-      if (Array.isArray(data)) {
-        setNotes(data);
-      } else {
-        console.warn("Format inattendu pour les notes :", data);
-        setNotes([]);
-      }
-    } catch (error) {
-      console.error("Erreur fetch notes :", error);
+      setNotes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
       setNotes([]);
     }
-  }, []); // Pas de dépendances, car `setNotes` est stable
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
+      if (!id) return;
+      setLoading(true);
       try {
-        setLoading(true);
-        if (!id) return;
-
         const perfumeData = await getPerfumeById(Number(id));
         if (perfumeData) {
           setPerfume(perfumeData);
-
           const brandData = getBrandById(perfumeData.brand_id);
           setBrand(brandData);
-
-          await fetchNotes(perfumeData.id); // Utilisation de la version mémorisée
+          await fetchNotes(perfumeData.id);
         }
-      } catch (err) {
-        console.error("Erreur lors du chargement du parfum:", err);
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, [id, getPerfumeById, getBrandById, fetchNotes]); // Ajoutez `fetchNotes` comme dépendance
+  }, [id, getPerfumeById, getBrandById, fetchNotes]);
 
-  const handleFavoriteToggle = async () => {
+  const handleToggle = async (status: "owned" | "tested" | "wishlist") => {
     if (!isAuthenticated) {
-      alert("Veuillez vous connecter pour ajouter aux favoris");
+      alert("Veuillez vous connecter");
       return;
     }
-    setIsFavorite((prev) => !prev);
+    const isInStatus =
+      (status === "owned" && ownedIds.includes(perfumeId)) ||
+      (status === "tested" && testedIds.includes(perfumeId)) ||
+      (status === "wishlist" && wishlistIds.includes(perfumeId));
+
+    if (isInStatus) {
+      await removeFromCollection(perfumeId);
+    } else {
+      await addToCollection(perfumeId, status);
+    }
   };
 
   // Regrouper les notes par type
   const groupedNotes = notes.reduce((acc: Record<string, string[]>, note) => {
-    if (!acc[note.type]) {
-      acc[note.type] = [];
-    }
+    if (!acc[note.type]) acc[note.type] = [];
     acc[note.type].push(note.value);
     return acc;
   }, {});
@@ -89,24 +92,17 @@ function PerfumeDetail() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black">
-          loading...
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black" />
       </div>
     );
   }
 
   if (!perfume) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-xl font-bold">Parfum non trouvé</h2>
-      </div>
-    );
+    return <div className="text-center py-12">Parfum non trouvé</div>;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* --- Brand Section --- */}
       {brand && (
         <section className="flex flex-col items-center mb-8">
           <img
@@ -118,9 +114,7 @@ function PerfumeDetail() {
         </section>
       )}
 
-      {/* --- Product Section --- */}
       <section className="flex flex-col md:flex-row justify-center items-start gap-6 mb-8">
-        {/* Image produit */}
         <div className="w-full md:w-[260px] h-[280px] border border-black bg-[#fffcfc] flex items-center justify-center relative">
           <img
             className="max-w-[240px] max-h-[260px] object-contain"
@@ -136,7 +130,6 @@ function PerfumeDetail() {
           </div>
         </div>
 
-        {/* Détails produit */}
         <div className="flex flex-col w-full md:w-auto">
           <div className="w-full md:w-[200px] h-[40px] border border-black bg-[#fffcfc] flex items-center justify-center">
             <h2 className="text-sm font-medium">{perfume.name}</h2>
@@ -145,55 +138,63 @@ function PerfumeDetail() {
           <div className="mt-4 w-full md:w-[500px] min-h-[200px] border border-black shadow p-4">
             <p className="mb-4 text-sm">{perfume.description}</p>
 
-            {Object.keys(groupedNotes).length > 0 && (
-              <div className="space-y-4">
-                {Object.entries(groupedNotes).map(([type, values]) => (
-                  <div key={type} className="text-xs">
-                    {/* Afficher le type traduit si besoin */}
-                    <p className="font-semibold mb-1">
-                      {type === "top"
-                        ? "Notes de tête"
-                        : type === "heart"
-                          ? "Notes de cœur"
-                          : type === "base"
-                            ? "Notes de fond"
-                            : type}
-                    </p>
-                    {/* Afficher toutes les valeurs sur une ligne */}
-                    <p>{values.join(", ")}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {Object.keys(groupedNotes).length > 0 &&
+              Object.entries(groupedNotes).map(([type, values]) => (
+                <div key={type} className="text-xs mb-2">
+                  <p className="font-semibold">
+                    {type === "top"
+                      ? "Notes de tête"
+                      : type === "heart"
+                        ? "Notes de cœur"
+                        : type === "base"
+                          ? "Notes de fond"
+                          : type}
+                  </p>
+                  <p>{values.join(", ")}</p>
+                </div>
+              ))}
           </div>
         </div>
       </section>
 
-      {/* --- Actions --- */}
-      <section className="flex flex-col md:flex-row gap-4 justify-center md:justify-start mb-8">
+      {/* Actions */}
+      <section className="flex flex-col md:flex-row gap-4">
         <motion.button
           whileHover={{ scale: 1.05 }}
-          className="w-[184px] h-9 border border-black bg-[#fffcfc] text-xs"
-          onClick={() => alert("Je le possède")}
-        >
-          Je le possède
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          className="w-[184px] h-9 border border-black bg-[#fffcfc] text-xs"
-          onClick={() => alert("À tester")}
-        >
-          A tester
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleFavoriteToggle}
+          onClick={() => handleToggle("owned")}
           className={`w-[184px] h-9 border border-black text-xs ${
-            isFavorite ? "bg-black text-white" : "bg-[#fffcfc] text-black"
+            ownedIds.includes(perfumeId)
+              ? "bg-black text-white"
+              : "bg-[#fffcfc] text-black"
           }`}
         >
-          Ajouter à ta wishlist
+          {ownedIds.includes(perfumeId) ? "Retirer (possède)" : "Je le possède"}
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          onClick={() => handleToggle("tested")}
+          className={`w-[184px] h-9 border border-black text-xs ${
+            testedIds.includes(perfumeId)
+              ? "bg-black text-white"
+              : "bg-[#fffcfc] text-black"
+          }`}
+        >
+          {testedIds.includes(perfumeId) ? "Retirer (testé)" : "À tester"}
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          onClick={() => handleToggle("wishlist")}
+          className={`w-[184px] h-9 border border-black text-xs ${
+            wishlistIds.includes(perfumeId)
+              ? "bg-black text-white"
+              : "bg-[#fffcfc] text-black"
+          }`}
+        >
+          {wishlistIds.includes(perfumeId)
+            ? "Retirer de ta wishlist"
+            : "Ajouter à ta wishlist"}
         </motion.button>
       </section>
     </div>

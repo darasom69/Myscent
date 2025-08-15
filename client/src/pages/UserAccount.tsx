@@ -1,40 +1,55 @@
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import CollectionList from "../components/userAccount/CollectionList";
 import { useAuthContext } from "../context/AuthContext";
+import { useCollectionContext } from "../context/CollectionContext";
+import { usePerfumeContext } from "../context/PerfumeContext";
 import type { Perfume } from "../context/PerfumeContext";
 
 const UserAccount = () => {
   const { user } = useAuthContext();
-  const [owned, setOwned] = useState<Perfume[]>([]);
-  const [tested, setTested] = useState<Perfume[]>([]);
-  const [wishlist, setWishlist] = useState<Perfume[]>([]);
+  const { ownedIds, testedIds, wishlistIds } = useCollectionContext();
+  const { perfumes } = usePerfumeContext();
+
   const [selectedTab, setSelectedTab] = useState<
     "owned" | "tested" | "wishlist"
   >("owned");
 
-  useEffect(() => {
-    const fetchCollection = async (type: "owned" | "tested" | "wishlist") => {
-      try {
-        const res = await fetch(
-          `/api/users/${user?.id}/collection?type=${type}`,
-        );
-        const data = await res.json();
-        if (type === "owned") setOwned(data);
-        else if (type === "tested") setTested(data);
-        else setWishlist(data);
-      } catch (error) {
-        console.error("Erreur de chargement de la collection:", error);
-      }
-    };
+  // Helper pour convertir une liste d'IDs -> objets Perfume depuis la liste globale
+  const toPerfumeList = useCallback(
+    (ids: number[]): Perfume[] => perfumes.filter((p) => ids.includes(p.id)),
+    [perfumes],
+  );
 
-    if (user) {
-      fetchCollection("owned");
-      fetchCollection("tested");
-      fetchCollection("wishlist");
-    }
-  }, [user]);
+  const ownedPerfumes = useMemo(
+    () => toPerfumeList(ownedIds),
+    [toPerfumeList, ownedIds],
+  );
+  const testedPerfumes = useMemo(
+    () => toPerfumeList(testedIds),
+    [toPerfumeList, testedIds],
+  );
+  const wishlistPerfumes = useMemo(
+    () => toPerfumeList(wishlistIds),
+    [toPerfumeList, wishlistIds],
+  );
+
+  const counts = {
+    owned: ownedIds.length,
+    tested: testedIds.length,
+    wishlist: wishlistIds.length,
+  };
 
   if (!user) return <p>Chargement...</p>;
+
+  // Optionnel : petit état de chargement si la liste globale n'est pas encore arrivée
+  const loading = perfumes.length === 0; // PerfumeContext fetch au mount
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f3ef] px-4 py-8 text-center">
@@ -80,29 +95,35 @@ const UserAccount = () => {
             className={`pb-2 ${selectedTab === "owned" ? "border-b-2 border-black font-medium" : "text-gray-500"}`}
             onClick={() => setSelectedTab("owned")}
           >
-            Possède
+            Possède ({counts.owned})
           </button>
           <button
             type="button"
             className={`pb-2 ${selectedTab === "tested" ? "border-b-2 border-black font-medium" : "text-gray-500"}`}
             onClick={() => setSelectedTab("tested")}
           >
-            Testé
+            Testé ({counts.tested})
           </button>
           <button
             type="button"
             className={`pb-2 ${selectedTab === "wishlist" ? "border-b-2 border-black font-medium" : "text-gray-500"}`}
             onClick={() => setSelectedTab("wishlist")}
           >
-            Wishlist
+            Wishlist ({counts.wishlist}/10)
           </button>
         </div>
 
         {/* Liste des parfums */}
         <div className="mt-6">
-          {selectedTab === "owned" && <CollectionList perfumes={owned} />}
-          {selectedTab === "tested" && <CollectionList perfumes={tested} />}
-          {selectedTab === "wishlist" && <CollectionList perfumes={wishlist} />}
+          {selectedTab === "owned" && (
+            <CollectionList perfumes={ownedPerfumes} />
+          )}
+          {selectedTab === "tested" && (
+            <CollectionList perfumes={testedPerfumes} />
+          )}
+          {selectedTab === "wishlist" && (
+            <CollectionList perfumes={wishlistPerfumes} />
+          )}
         </div>
       </div>
     </div>
