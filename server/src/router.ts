@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateToken, requireAdmin } from "./middlewares/authMiddleware";
 import brandActions from "./modules/brand/brandAction";
+import collectionActions from "./modules/collection/collectionActions";
 import genderActions from "./modules/gender/genderActions";
 import itemActions from "./modules/item/itemActions";
 import olfactoryFamilyActions from "./modules/olfactoryFamily/olfactoryFamilyActions";
@@ -71,6 +72,28 @@ router.delete(
   authenticateToken,
   requireAdmin,
   userActions.destroy,
+);
+
+// User collection (possède / testé / wishlist)
+router.get(
+  "/api/users/:userId/collection",
+  authenticateToken,
+  collectionActions.ensureSameUser,
+  collectionActions.browse,
+);
+
+router.post(
+  "/api/users/:userId/collection",
+  authenticateToken,
+  collectionActions.ensureSameUser,
+  collectionActions.add,
+);
+
+router.delete(
+  "/api/users/:userId/collection/:perfumeId",
+  authenticateToken,
+  collectionActions.ensureSameUser,
+  collectionActions.destroy,
 );
 
 export default router;
