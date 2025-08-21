@@ -5,58 +5,60 @@ type Review = {
   id?: number;
   perfume_id: number;
   user_id: number;
-  rating: number;
-  text: string;
-  created_at?: string;
+  rating: number; // 1..5
+  comment: string | null;
+  review_date?: string; // TIMESTAMP
 };
 
-// Browse all reviews
+// Liste tous les avis
 const browse = async (): Promise<Rows> => {
   const [rows] = await client.query(
     `SELECT r.*, u.username AS user_name
      FROM review r
-     JOIN user u ON r.user_id = u.id
-     ORDER BY r.created_at DESC`,
+     JOIN users u ON r.user_id = u.id
+     ORDER BY r.review_date DESC`,
   );
   return rows as Rows;
 };
 
-// Get reviews by perfume id
+// Avis d’un parfum
 const findByPerfume = async (perfumeId: number): Promise<Rows> => {
   const [rows] = await client.query(
     `SELECT r.*, u.username AS user_name
      FROM review r
-     JOIN user u ON r.user_id = u.id
+     JOIN users u ON r.user_id = u.id
      WHERE r.perfume_id = ?
-     ORDER BY r.created_at DESC`,
+     ORDER BY r.review_date DESC`,
     [perfumeId],
   );
   return rows as Rows;
 };
 
-// Create new review
+// Créer un avis
 const create = async (review: Review): Promise<number> => {
   const [result] = await client.query<Result>(
-    `INSERT INTO review (perfume_id, user_id, rating, text, created_at)
-     VALUES (?, ?, ?, ?, NOW())`,
-    [review.perfume_id, review.user_id, review.rating, review.text],
+    `INSERT INTO review (rating, comment, user_id, perfume_id)
+     VALUES (?, ?, ?, ?)`,
+    [review.rating, review.comment ?? null, review.user_id, review.perfume_id],
   );
   return result.insertId;
 };
 
-// Update review
+// Mettre à jour un avis
 const update = async (
   id: number,
   review: Partial<Review>,
 ): Promise<boolean> => {
   const [result] = await client.query<Result>(
-    "UPDATE review SET rating = ?, text = ? WHERE id = ?",
-    [review.rating, review.text, id],
+    `UPDATE review
+     SET rating = ?, comment = ?, review_date = NOW()
+     WHERE id = ?`,
+    [review.rating, review.comment ?? null, id],
   );
   return result.affectedRows > 0;
 };
 
-// Delete review
+// Supprimer un avis
 const destroy = async (id: number): Promise<boolean> => {
   const [result] = await client.query<Result>(
     "DELETE FROM review WHERE id = ?",
@@ -65,5 +67,5 @@ const destroy = async (id: number): Promise<boolean> => {
   return result.affectedRows > 0;
 };
 
-export default { browse, findByPerfume, create, update, destroy };
-export type { Review };
+const reviewRepository = { browse, findByPerfume, create, update, destroy };
+export default reviewRepository;

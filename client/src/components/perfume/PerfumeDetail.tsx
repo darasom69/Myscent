@@ -6,10 +6,7 @@ import { type Brand, useBrandContext } from "../../context/BrandContext";
 import { useCollectionContext } from "../../context/CollectionContext";
 import { type Perfume, usePerfumeContext } from "../../context/PerfumeContext";
 
-type Note = {
-  type: string;
-  value: string;
-};
+type Note = { type: string; value: string };
 
 function PerfumeDetail() {
   const { id } = useParams();
@@ -31,7 +28,6 @@ function PerfumeDetail() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Charger les notes du parfum
   const fetchNotes = useCallback(async (perfumeIdLocal: number) => {
     try {
       const res = await fetch(
@@ -70,22 +66,20 @@ function PerfumeDetail() {
       alert("Veuillez vous connecter");
       return;
     }
-    const isInStatus =
+    const inStatus =
       (status === "owned" && ownedIds.includes(perfumeId)) ||
       (status === "tested" && testedIds.includes(perfumeId)) ||
       (status === "wishlist" && wishlistIds.includes(perfumeId));
 
-    if (isInStatus) {
-      await removeFromCollection(perfumeId);
-    } else {
-      await addToCollection(perfumeId, status);
-    }
+    if (inStatus) await removeFromCollection(perfumeId);
+    else await addToCollection(perfumeId, status);
   };
 
-  // Regrouper les notes par type
   const groupedNotes = notes.reduce((acc: Record<string, string[]>, note) => {
-    if (!acc[note.type]) acc[note.type] = [];
-    acc[note.type].push(note.value);
+    if (!acc[note.type]) {
+      acc[note.type] = []; // Initialize the array if it doesn't exist
+    }
+    acc[note.type].push(note.value); // Add the note value to the array
     return acc;
   }, {});
 
@@ -157,8 +151,8 @@ function PerfumeDetail() {
         </div>
       </section>
 
-      {/* Actions */}
-      <section className="flex flex-col md:flex-row gap-4">
+      {/* Actions collection */}
+      <section className="flex flex-col md:flex-row gap-4 mb-8">
         <motion.button
           whileHover={{ scale: 1.05 }}
           onClick={() => handleToggle("owned")}
