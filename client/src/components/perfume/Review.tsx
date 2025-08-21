@@ -1,87 +1,122 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 
-type Review = {
+type ReviewRow = {
   id: number;
-  text: string;
   rating: number;
-  user?: { username?: string };
+  comment?: string | null; // backend actuel
+  text?: string | null; // compat éventuelle
+  user_name?: string | null; // renvoyé par le repo
+  user_id?: number;
+  review_date?: string;
+  created_at?: string;
 };
 
-type ReviewSectionProps = {
+type Props = {
   perfumeId: number;
 };
 
-const Review = ({ perfumeId }: ReviewSectionProps) => {
+const Review = ({ perfumeId }: Props) => {
   const { isAuthenticated, user, token } = useAuthContext();
 
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [newReview, setNewReview] = useState("");
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  // Charger les reviews
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/perfumes/${perfumeId}/reviews`,
-        );
-        if (!res.ok) throw new Error("Erreur chargement avis");
-        const data = await res.json();
-        setReviews(data);
-      } catch (err) {
-        console.error("Erreur fetch reviews:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReviews();
+  const fetchReviews = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reviews/perfume/${perfumeId}`,
+      );
+      if (!res.ok) throw new Error("Erreur chargement avis");
+      const data = (await res.json()) as ReviewRow[];
+      setReviews(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setReviews([]);
+    } finally {
+      setLoading(false);
+    }
   }, [perfumeId]);
 
-  const handleSubmitReview = async (e: React.FormEvent) => {
+  useEffect(() => {
+    void fetchReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchReviews]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!isAuthenticated || !user) {
       alert("Veuillez vous connecter pour laisser un avis");
       return;
     }
-    if (!newReview.trim() || rating === 0) return;
+    if (!token) {
+      alert("Session expirée. Reconnectez-vous.");
+      return;
+    }
+    if (!newReview.trim() || rating < 1 || rating > 5) {
+      alert("Renseigne une note (1–5) et un commentaire.");
+      return;
+    }
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/perfumes/${perfumeId}/reviews`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-          body: JSON.stringify({
-            text: newReview,
-            rating,
-            userId: user.id,
-          }),
+      const body = {
+        perfume_id: perfumeId,
+        user_id: user.id, // sera ignoré si le back lit req.user
+        rating,
+        comment: newReview, // le back attend 'comment'
+        text: newReview, // compat si jamais
+      };
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ne jamais envoyer ""
         },
-      );
-      if (!res.ok) throw new Error("Erreur ajout avis");
-      const created = await res.json();
-      setReviews((prev) => [...prev, created]);
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`Erreur ajout avis: ${t}`);
+      }
+
+      await fetchReviews();
       setNewReview("");
       setRating(0);
-      setShowReviewForm(false);
+      setShowForm(false);
     } catch (err) {
       console.error("Erreur submit review:", err);
+      alert("Impossible d’ajouter l’avis");
     }
+  };
+
+  const averageRating = useMemo(() => {
+    if (reviews.length === 0) return null;
+    const sum = reviews.reduce((acc, r) => acc + (r.rating ?? 0), 0);
+    return Math.round((sum / reviews.length) * 10) / 10;
+  }, [reviews]);
+
+  const renderStars = (value: number) => {
+    const rounded = Math.round(value);
+    return (
+      <>
+        {"★".repeat(rounded)}
+        {"☆".repeat(5 - rounded)}
+      </>
+    );
   };
 
   return (
     <section className="w-full max-w-md mx-auto">
-      {/* Carte des reviews */}
       <motion.div
         className="w-full rounded-2xl border border-black shadow bg-white overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -89,38 +124,48 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
         transition={{ duration: 0.4 }}
       >
         <div className="p-4">
-          <h3 className="text-xl font-playfair text-center mb-4">Avis</h3>
+          <h3 className="text-xl text-center mb-4">Avis</h3>
 
-          {/* étoiles moyennes */}
-          <div className="flex justify-center mb-4">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star
-                key={s}
-                className="w-5 h-5 text-yellow-500 fill-yellow-500"
-              />
-            ))}
+          <div className="flex justify-center items-center gap-2 mb-4">
+            {averageRating !== null ? (
+              <>
+                <span className="text-yellow-500 text-lg">
+                  {renderStars(averageRating)}
+                </span>
+                <span className="text-sm">
+                  {averageRating}/5 ({reviews.length} avis)
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-gray-500">
+                Aucune note pour l’instant
+              </span>
+            )}
           </div>
 
-          {/* Liste des avis */}
           <div className="max-h-72 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-black" />
               </div>
             ) : reviews.length > 0 ? (
-              reviews.map((r) => (
-                <div key={r.id} className="flex items-start mb-4">
-                  <div className="w-8 h-8 rounded-full border border-black flex items-center justify-center text-sm">
-                    {r.user?.username?.charAt(0).toUpperCase() ?? "U"}
+              reviews.map((r) => {
+                const content =
+                  typeof r.comment !== "undefined" ? r.comment : r.text;
+                return (
+                  <div key={r.id} className="flex items-start mb-4">
+                    <div className="w-8 h-8 rounded-full border border-black flex items-center justify-center text-sm">
+                      {r.user_name?.charAt(0).toUpperCase() ?? "U"}
+                    </div>
+                    <div className="ml-3 text-sm">
+                      <p className="font-semibold">
+                        {r.user_name ?? "Utilisateur"} — {r.rating}/5
+                      </p>
+                      {content && <p>{content}</p>}
+                    </div>
                   </div>
-                  <div className="ml-3 text-sm">
-                    <p className="font-semibold">
-                      {r.user?.username ?? "Utilisateur"}
-                    </p>
-                    <p>{r.text}</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-center text-sm text-gray-600">
                 Aucun avis pour le moment.
@@ -130,15 +175,15 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
         </div>
       </motion.div>
 
-      {/* Bouton pour ouvrir formulaire */}
+      {/* bouton / formulaire */}
       <div className="mt-4 text-right">
-        {!showReviewForm ? (
+        {!showForm ? (
           <motion.button
             className="text-black underline text-sm"
-            onClick={() => setShowReviewForm(true)}
+            onClick={() => setShowForm(true)}
             whileHover={{ scale: 1.05 }}
           >
-            Laisse un avis...
+            Laisser un avis…
           </motion.button>
         ) : (
           <AnimatePresence>
@@ -146,7 +191,7 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              onSubmit={handleSubmitReview}
+              onSubmit={handleSubmit}
               className="mt-4 bg-white p-4 rounded-lg border border-black"
             >
               <div className="flex justify-center mb-3">
@@ -158,6 +203,7 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
                     onMouseEnter={() => setHoveredRating(s)}
                     onMouseLeave={() => setHoveredRating(0)}
                     whileHover={{ scale: 1.2 }}
+                    aria-label={`Note ${s}`}
                   >
                     <Star
                       className={`w-6 h-6 ${
@@ -169,19 +215,19 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
                   </motion.button>
                 ))}
               </div>
+
               <textarea
                 value={newReview}
                 onChange={(e) => setNewReview(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded min-h-[80px] focus:outline-none focus:border-black"
-                placeholder="Partagez votre expérience..."
-              >
-                s
-              </textarea>
+                placeholder="Partagez votre expérience…"
+              />
+
               <div className="flex justify-end gap-2 mt-3">
                 <motion.button
                   type="button"
                   onClick={() => {
-                    setShowReviewForm(false);
+                    setShowForm(false);
                     setNewReview("");
                     setRating(0);
                   }}
@@ -194,7 +240,9 @@ const Review = ({ perfumeId }: ReviewSectionProps) => {
                   type="submit"
                   className="px-3 py-1 bg-black text-white rounded text-sm"
                   whileHover={{ scale: 1.05 }}
-                  disabled={!newReview.trim() || rating === 0}
+                  disabled={
+                    !newReview.trim() || rating === 0 || !isAuthenticated
+                  }
                 >
                   Publier
                 </motion.button>
