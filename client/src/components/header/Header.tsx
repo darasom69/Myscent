@@ -105,7 +105,7 @@ function Header() {
               {brands.map((brand) => (
                 <li key={brand.id}>
                   <Link
-                    to={`/brand/${brand.id}`}
+                    to={`/marque/${brand.id}`}
                     className="block text-sm font-medium text-gray-800 hover:text-black hover:underline"
                   >
                     {brand.name}
