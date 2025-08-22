@@ -5,6 +5,7 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 
 import App from "./App";
 import AllPerfumes from "./pages/AllPerfumes";
+import Brand from "./pages/Brand";
 import Home from "./pages/Home";
 import Perfume from "./pages/Perfume";
 import UserAccount from "./pages/UserAccount";
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
       {
         path: "/moncompte",
         element: <UserAccount />,
+      },
+      {
+        path: "/marque/:id",
+        element: <Brand />,
       },
     ],
   },
