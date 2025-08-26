@@ -8,6 +8,7 @@ import AllPerfumes from "./pages/AllPerfumes";
 import Brand from "./pages/Brand";
 import Home from "./pages/Home";
 import Perfume from "./pages/Perfume";
+import Quizz from "./pages/Quizz";
 import UserAccount from "./pages/UserAccount";
 
 const router = createBrowserRouter([
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
       {
         path: "/marque/:id",
         element: <Brand />,
+      },
+      {
+        path: "/quizz",
+        element: <Quizz />,
       },
     ],
   },
