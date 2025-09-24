@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router";
 
 import App from "./App";
+import Admin from "./pages/Admin";
 import AllPerfumes from "./pages/AllPerfumes";
 import Brand from "./pages/Brand";
 import Home from "./pages/Home";
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
       {
         path: "/quizz",
         element: <Quizz />,
+      },
+      {
+        path: "/admin",
+        element: <Admin />,
       },
     ],
   },
