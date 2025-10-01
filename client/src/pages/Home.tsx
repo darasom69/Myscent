@@ -1,15 +1,13 @@
-import BrandInfo from "../components/home/BrandInfo";
-import Carousel from "../components/home/Carousel";
 import Features from "../components/home/Features";
-import SearchBar from "../components/home/SearchBar";
+import Header from "../components/home/Header";
+import PerfumesMoment from "../components/home/PerfumesMoment";
 
 function Home() {
   return (
     <div className="bg-primary">
-      <SearchBar />
-      <Carousel />
+      <Header />
       <div className="flex flex-col items-center justify-start">
-        <BrandInfo />
+        <PerfumesMoment />
       </div>
       <Features />
     </div>
