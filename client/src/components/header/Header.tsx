@@ -13,7 +13,8 @@ function Header() {
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const navigate = useNavigate();
 
-  const { isAuthenticated, logout } = useAuthContext();
+  // ⬇️ récupère aussi user
+  const { isAuthenticated, logout, user } = useAuthContext();
   const { brands } = useBrandContext();
 
   return (
@@ -64,17 +65,34 @@ function Header() {
           </button>
 
           {isAuthenticated && openUserMenu && (
-            <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50">
-              <button
-                type="button"
-                onClick={() => {
-                  navigate("/moncompte");
-                  setOpenUserMenu(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100"
-              >
-                Mon compte
-              </button>
+            <div className="absolute right-0 mt-2 w-44 bg-white border rounded shadow-lg z-50">
+              {/* Si admin → lien Admin seulement */}
+              {user?.role === "admin" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/admin");
+                    setOpenUserMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 font-medium"
+                >
+                  Administrateur
+                </button>
+              ) : (
+                // Sinon → lien Mon compte
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/moncompte");
+                    setOpenUserMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                >
+                  Mon compte
+                </button>
+              )}
+
+              {/* Déconnexion → commun aux deux */}
               <button
                 type="button"
                 onClick={() => {
@@ -106,6 +124,7 @@ function Header() {
                 <li key={brand.id}>
                   <Link
                     to={`/marque/${brand.id}`}
+                    onClick={() => setOpenBrands(false)} // ferme le dropdown au clic
                     className="block text-sm font-medium text-gray-800 hover:text-black hover:underline"
                   >
                     {brand.name}
