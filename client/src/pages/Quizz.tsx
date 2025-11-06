@@ -1,12 +1,11 @@
-// client/src/pages/Quizz.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { type Perfume, usePerfumeContext } from "../context/PerfumeContext";
 
 // ---- Types ----
 type Option = { label: string; tags: string[] };
 type Question = { id: number; text: string; options: Option[] };
-type NoteRow = { type: "top" | "heart" | "base" | string; value: string };
+type NoteRow = { type: string; value: string };
 
 // ---- Questions (adapte les tags aux noms EXACTS de ta BDD) ----
 const QUESTIONS: Question[] = [
@@ -98,19 +97,23 @@ const QUESTIONS: Question[] = [
 ];
 
 export default function Quizz() {
-  const { perfumes, fetchPerfumes } = usePerfumeContext();
+  const { perfumes = [], fetchPerfumes } = usePerfumeContext();
 
   const [step, setStep] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<string[][]>(
-    Array(QUESTIONS.length).fill([]),
+
+  // éviter Array.fill([]) qui partage la même référence
+  const emptyAnswers = useMemo(
+    () => Array.from({ length: QUESTIONS.length }, () => [] as string[]),
+    [],
   );
+  const [answers, setAnswers] = useState<string[][]>(emptyAnswers);
 
   const [loadingPerfumes, setLoadingPerfumes] = useState(false);
   const [buildingIndex, setBuildingIndex] = useState(false);
   const [scoring, setScoring] = useState(false);
 
-  const [indexNotes, setIndexNotes] = useState<Record<number, string[]>>({}); // perfumeId -> notes(tags)
+  const [indexNotes, setIndexNotes] = useState<Record<number, string[]>>({});
   const [results, setResults] = useState<
     (Perfume & { score: number })[] | null
   >(null);
@@ -118,10 +121,10 @@ export default function Quizz() {
   const total = QUESTIONS.length;
   const current = QUESTIONS[step];
 
-  // S’assurer qu’on a les parfums
+  // fetch parfums si nécessaire
   useEffect(() => {
-    const ensure = async () => {
-      if (!perfumes || perfumes.length === 0) {
+    const run = async () => {
+      if (perfumes.length === 0) {
         setLoadingPerfumes(true);
         try {
           await fetchPerfumes();
@@ -130,11 +133,11 @@ export default function Quizz() {
         }
       }
     };
-    void ensure();
-  }, [perfumes, fetchPerfumes]);
+    run();
+  }, [perfumes.length, fetchPerfumes]);
 
-  // Construit l’index des notes localement en appelant /api/perfumes/:id/notes pour CHAQUE parfum
-  const buildIndexIfNeeded = async () => {
+  // construit l’index des notes (/api/perfumes/:id/notes)
+  const buildIndexIfNeeded = useCallback(async () => {
     if (Object.keys(indexNotes).length > 0) return;
 
     setBuildingIndex(true);
@@ -142,67 +145,63 @@ export default function Quizz() {
       const base = import.meta.env.VITE_API_URL ?? "";
       const entries: [number, string[]][] = [];
 
-      // Pour éviter de bombarder le serveur, on fait ça en petites séquences.
       for (const p of perfumes) {
         try {
           const res = await fetch(`${base}/api/perfumes/${p.id}/notes`);
           if (!res.ok) continue;
           const rows = (await res.json()) as NoteRow[];
-          // Normaliser : on met en minuscules
           const tags = rows.map((r) => String(r.value).toLowerCase().trim());
           entries.push([p.id, Array.from(new Set(tags))]);
         } catch {
-          // ignore pour ce parfum
+          // ignore erreur par parfum
         }
       }
-
       setIndexNotes(Object.fromEntries(entries));
     } finally {
       setBuildingIndex(false);
     }
-  };
+  }, [indexNotes, perfumes]);
 
-  // Scoring local
-  const handleNext = async () => {
+  // navigation + scoring
+  const handleNext = useCallback(async () => {
     if (selectedIdx === null) return;
 
-    // Mémorise les tags pour la question courante
     const chosenTags = current.options[selectedIdx].tags.map((t) =>
       t.toLowerCase().trim(),
     );
-    const tmp = [...answers];
-    tmp[step] = chosenTags;
-    setAnswers(tmp);
+
+    setAnswers((prev) => prev.map((a, i) => (i === step ? chosenTags : a)));
     setSelectedIdx(null);
 
-    // Si dernière question → calcul local
-    if (step === total - 1) {
+    const isLast = step === total - 1;
+
+    if (isLast) {
       await buildIndexIfNeeded();
 
-      // Agrège tous les tags utilisateur
-      const userTags = tmp.flat().map((t) => t.toLowerCase().trim());
+      const userTags = [
+        ...answers.slice(0, step),
+        chosenTags,
+        ...answers.slice(step + 1),
+      ]
+        .flat()
+        .map((t) => t.toLowerCase().trim());
+
       const userTagSet = new Set(userTags);
 
       setScoring(true);
       try {
-        // Score simple : +2 si note exacte match, +1 si "famille" implicite (mot-clé contenu)
         const scored: (Perfume & { score: number })[] = perfumes.map((p) => {
           const tags = indexNotes[p.id] ?? [];
           let score = 0;
-
           for (const tag of tags) {
             if (userTagSet.has(tag)) score += 2;
-            // Petit bonus si tag utilisateur inclus dans la note (ex: "boisé" avec "cèdre")
             for (const ut of userTagSet) {
-              if (tag.includes(ut) || ut.includes(tag)) {
-                score += 1;
-              }
+              if (tag.includes(ut) || ut.includes(tag)) score += 1;
             }
           }
           return { ...p, score };
         });
 
-        // Garde ceux qui ont un score > 0, tri desc
         const top = scored
           .filter((p) => p.score > 0)
           .sort((a, b) => b.score - a.score)
@@ -215,50 +214,86 @@ export default function Quizz() {
     } else {
       setStep((s) => s + 1);
     }
-  };
+  }, [
+    selectedIdx,
+    current,
+    step,
+    total,
+    buildIndexIfNeeded,
+    perfumes,
+    indexNotes,
+    answers,
+  ]);
+
+  // Enter = Suivant / Résultat
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!results) {
+          void handleNext();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [handleNext, results]);
 
   const handleRestart = () => {
     setStep(0);
     setSelectedIdx(null);
-    setAnswers(Array(QUESTIONS.length).fill([]));
+    setAnswers(Array.from({ length: QUESTIONS.length }, () => [] as string[]));
     setResults(null);
   };
 
-  const progress = useMemo(() => {
-    if (results) return 100;
-    return Math.round((step / total) * 100);
-  }, [results, step, total]);
+  const progress = useMemo(
+    () => (results ? 100 : Math.round((step / total) * 100)),
+    [results, step, total],
+  );
 
   const disabled =
     loadingPerfumes || buildingIndex || scoring || selectedIdx === null;
 
   return (
     <div className="min-h-screen bg-[#f4efe9]">
-      <div className="mx-auto max-w-4xl px-4 pt-14 pb-8 text-center">
-        <h1 className="font-playfair text-3xl md:text-4xl">
-          Découvre le Parfum qui vous ressemble
+      {/* header + progress */}
+      <div className="mx-auto max-w-3xl px-6 pt-12 pb-8 text-center">
+        <h1 className="font-display text-[28px] md:text-[36px] leading-tight text-[#0b0908]">
+          Découvre le parfum qui vous ressemble
         </h1>
+        <p className="mt-2 text-sm text-black/70">
+          Répondez à quelques questions
+        </p>
 
-        <div className="mt-6">
-          <div className="mx-auto h-[2px] w-64 bg-black/20" />
-          <p className="mt-2 text-sm">
-            {results ? "Résultat" : `Question ${step + 1} sur ${total}`}
-          </p>
-          <div className="mx-auto mt-3 h-2 w-64 rounded bg-black/10 overflow-hidden">
-            <div
-              className="h-full bg-black transition-all"
-              style={{ width: `${progress}%` }}
+        {/* ligne + points */}
+        <div className="mt-6 mx-auto flex w-64 items-center justify-between">
+          {QUESTIONS.map((q, idx) => (
+            <span
+              key={q.id} // ✅ clé stable (pas l'index)
+              className={`h-2 w-2 rounded-full ${idx <= step || results ? "bg-black" : "bg-black/25"}`}
             />
-          </div>
+          ))}
         </div>
+
+        {/* bar progress fine */}
+        <div className="mx-auto mt-3 h-1 w-64 overflow-hidden rounded bg-black/10">
+          <div
+            className="h-full bg-black transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <p className="mt-2 text-xs text-black/60">
+          {results ? "Résultat" : `Question ${step + 1} sur ${total}`}
+        </p>
       </div>
 
       <div className="mx-auto max-w-2xl px-4 pb-16">
-        <div className="rounded-2xl border border-black bg-white shadow p-6 md:p-8">
-          {/* Mode questions */}
+        <div className="rounded-2xl border border-black/15 bg-white shadow-sm p-6 md:p-8">
+          {/* --- Mode Questions --- */}
           {!results && (
             <>
-              <p className="text-center text-[15px] md:text-base mb-6">
+              <p className="mb-6 text-center text-[15px] md:text-base text-[#0b0908]">
                 {current.text}
               </p>
 
@@ -271,10 +306,10 @@ export default function Quizz() {
                       type="button"
                       onClick={() => setSelectedIdx(idx)}
                       className={[
-                        "w-full rounded-full border border-black px-5 py-2 text-sm transition",
+                        "w-full rounded-full border px-5 py-2 text-sm transition",
                         active
-                          ? "bg-black text-white"
-                          : "bg-white hover:bg-black/5",
+                          ? "border-black bg-black text-white"
+                          : "border-black/30 bg-white hover:bg-black/5",
                       ].join(" ")}
                     >
                       {opt.label}
@@ -288,10 +323,10 @@ export default function Quizz() {
                   type="button"
                   disabled={disabled}
                   onClick={handleNext}
-                  className={`rounded-full px-5 py-2 border border-black text-sm ${
+                  className={`rounded-full px-5 py-2 text-sm transition ${
                     disabled
-                      ? "bg-gray-200 cursor-not-allowed"
-                      : "bg-white hover:bg-black hover:text-white"
+                      ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                      : "bg-[#c9b3a2] text-[#2b1f18] hover:brightness-95"
                   }`}
                 >
                   {step === total - 1
@@ -304,40 +339,41 @@ export default function Quizz() {
             </>
           )}
 
-          {/* Mode résultats */}
+          {/* --- Mode Résultats --- */}
           {results && (
             <>
-              <h2 className="text-center text-xl font-semibold mb-2">
-                Ta sélection personnalisée
+              <h2 className="mb-2 text-center text-xl font-semibold text-[#0b0908]">
+                Ton parfum signature révélé
               </h2>
-
               {results.length === 0 ? (
                 <p className="text-center text-sm text-gray-600">
                   Aucun parfum ne correspond suffisamment à tes réponses.
                 </p>
               ) : (
                 <>
-                  <p className="text-center text-sm text-gray-700 mb-6">
+                  <p className="mb-6 text-center text-sm text-gray-700">
                     Voici les parfums qui matchent le mieux tes préférences.
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     {results.map((p) => (
                       <Link
                         key={p.id}
                         to={`/parfum/${p.id}`}
-                        className="group border border-black rounded-lg p-3 bg-[#fffcfc] hover:-translate-y-0.5 transition shadow-sm flex flex-col items-center"
+                        className="group flex flex-col items-center rounded-lg border border-black/15 bg-[#fffcfc] p-3 shadow-sm transition hover:-translate-y-0.5"
                       >
-                        <div className="h-[180px] w-full border border-black bg-white flex items-center justify-center">
+                        <div className="flex h-[180px] w-full items-center justify-center rounded border border-black/10 bg-white">
                           <img
                             src={p.image_url ?? "/default-perfume.png"}
                             alt={p.name}
-                            className="max-h-[160px] object-contain p-2"
+                            className="max-h-[160px] p-2 object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                           />
                         </div>
                         <div className="mt-3 text-center">
-                          <div className="font-medium text-sm">{p.name}</div>
-                          <div className="text-xs text-gray-600 mt-1">
+                          <div className="text-sm font-medium text-[#0b0908]">
+                            {p.name}
+                          </div>
+                          <div className="mt-1 text-xs text-gray-600">
                             Score : {p.score}
                           </div>
                         </div>
@@ -351,13 +387,13 @@ export default function Quizz() {
                 <button
                   type="button"
                   onClick={handleRestart}
-                  className="rounded-full px-4 py-2 border border-black text-sm bg-white hover:bg-black hover:text-white"
+                  className="rounded-full border border-black px-4 py-2 text-sm bg-white hover:bg-black hover:text-white"
                 >
                   Rejouer
                 </button>
                 <Link
                   to="/parfums"
-                  className="rounded-full px-4 py-2 border border-black text-sm bg-white hover:bg-black hover:text-white"
+                  className="rounded-full border border-black px-4 py-2 text-sm bg-white hover:bg-black hover:text-white"
                 >
                   Voir tous les parfums
                 </Link>
