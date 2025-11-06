@@ -15,7 +15,7 @@ function Perfume() {
   }
 
   return (
-    <div className="bg-primary p-4">
+    <div className="p-4">
       <PerfumeDetail />
       <Review perfumeId={perfumeId} />
     </div>

@@ -1,32 +1,36 @@
+// src/components/reviews/Review.tsx
 import { AnimatePresence, motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 
 type ReviewRow = {
   id: number;
-  rating: number;
+  rating: number; // 1..5
   comment?: string | null; // backend actuel
   text?: string | null; // compat éventuelle
   user_name?: string | null; // renvoyé par le repo
-  user_id?: number;
-  review_date?: string;
-  created_at?: string;
+  user_id?: number | null;
+  review_date?: string | null;
+  created_at?: string | null;
 };
 
-type Props = {
-  perfumeId: number;
-};
+type Props = { perfumeId: number };
 
-const Review = ({ perfumeId }: Props) => {
+export default function Review({ perfumeId }: Props) {
   const { isAuthenticated, user, token } = useAuthContext();
 
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // slider
+  const [index, setIndex] = useState(0);
+
+  // form
+  const [showForm, setShowForm] = useState(false);
   const [newReview, setNewReview] = useState("");
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [showForm, setShowForm] = useState(false);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -37,6 +41,7 @@ const Review = ({ perfumeId }: Props) => {
       if (!res.ok) throw new Error("Erreur chargement avis");
       const data = (await res.json()) as ReviewRow[];
       setReviews(Array.isArray(data) ? data : []);
+      setIndex(0);
     } catch (e) {
       console.error(e);
       setReviews([]);
@@ -47,12 +52,27 @@ const Review = ({ perfumeId }: Props) => {
 
   useEffect(() => {
     void fetchReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchReviews]);
+
+  const averageRating = useMemo(() => {
+    if (!reviews.length) return null;
+    const sum = reviews.reduce((a, r) => a + (r.rating ?? 0), 0);
+    return Math.round((sum / reviews.length) * 10) / 10;
+  }, [reviews]);
+
+  const current = reviews[index];
+
+  const next = () =>
+    setIndex((i) => (i + 1) % Math.max(reviews.length || 1, 1));
+  const prev = () =>
+    setIndex(
+      (i) =>
+        (i - 1 + Math.max(reviews.length || 1, 1)) %
+        Math.max(reviews.length || 1, 1),
+    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!isAuthenticated || !user) {
       alert("Veuillez vous connecter pour laisser un avis");
       return;
@@ -69,119 +89,161 @@ const Review = ({ perfumeId }: Props) => {
     try {
       const body = {
         perfume_id: perfumeId,
-        user_id: user.id, // sera ignoré si le back lit req.user
+        user_id: user.id,
         rating,
-        comment: newReview, // le back attend 'comment'
-        text: newReview, // compat si jamais
+        comment: newReview,
+        text: newReview,
       };
-
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ne jamais envoyer ""
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
       });
-
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`Erreur ajout avis: ${t}`);
-      }
+      if (!res.ok) throw new Error(await res.text());
 
       await fetchReviews();
+      setShowForm(false);
       setNewReview("");
       setRating(0);
-      setShowForm(false);
     } catch (err) {
       console.error("Erreur submit review:", err);
       alert("Impossible d’ajouter l’avis");
     }
   };
 
-  const averageRating = useMemo(() => {
-    if (reviews.length === 0) return null;
-    const sum = reviews.reduce((acc, r) => acc + (r.rating ?? 0), 0);
-    return Math.round((sum / reviews.length) * 10) / 10;
-  }, [reviews]);
-
-  const renderStars = (value: number) => {
-    const rounded = Math.round(value);
+  const Stars = ({ value }: { value: number }) => {
+    const v = Math.round(value);
     return (
-      <>
-        {"★".repeat(rounded)}
-        {"☆".repeat(5 - rounded)}
-      </>
+      <div aria-label={`${v} sur 5`} className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <Star
+            key={`star-${s}`}
+            className={`h-4 w-4 ${s <= v ? "fill-black text-black" : "text-black/30"}`}
+          />
+        ))}
+      </div>
     );
   };
 
   return (
-    <section className="w-full max-w-md mx-auto">
-      <motion.div
-        className="w-full rounded-2xl border border-black shadow bg-white overflow-hidden"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="p-4">
-          <h3 className="text-xl text-center mb-4">Avis</h3>
+    <section className="mx-auto max-w-6xl px-6 py-14">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        {/* Col gauche — titre + sous-titre */}
+        <div>
+          <h2 className="font-display text-2xl md:text-3xl text-[#0b0908]">
+            Avis de la communauté
+          </h2>
+          <p className="mt-2 max-w-sm text-sm text-black/70">
+            Découvrez ce que les passionnés de parfums pensent de cette création
+          </p>
 
-          <div className="flex justify-center items-center gap-2 mb-4">
-            {averageRating !== null ? (
-              <>
-                <span className="text-yellow-500 text-lg">
-                  {renderStars(averageRating)}
-                </span>
-                <span className="text-sm">
-                  {averageRating}/5 ({reviews.length} avis)
-                </span>
-              </>
-            ) : (
-              <span className="text-sm text-gray-500">
-                Aucune note pour l’instant
+          {/* Moyenne (facultatif) */}
+          {averageRating !== null && (
+            <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-black/10 bg-white px-4 py-2 text-sm">
+              <Stars value={averageRating} />
+              <span className="text-black/70">
+                {averageRating}/5 • {reviews.length} avis
               </span>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          <div className="max-h-72 overflow-y-auto">
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-black" />
+        {/* Col droite — carte + pagination */}
+        <div className="relative">
+          <motion.div
+            key={current?.id ?? "placeholder"}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.35 }}
+            className="rounded-xl border border-black/15 bg-white p-5 shadow-sm"
+          >
+            {/* Etoiles */}
+            <div className="mb-3">
+              {loading ? (
+                <div className="h-4 w-24 animate-pulse rounded bg-black/10" />
+              ) : current ? (
+                <Stars value={current.rating ?? 0} />
+              ) : (
+                <div className="text-sm text-black/50">
+                  Aucun avis pour le moment.
+                </div>
+              )}
+            </div>
+
+            {/* Commentaire */}
+            <p className="text-sm text-[#0b0908]">
+              {loading
+                ? "Chargement…"
+                : current?.comment || current?.text || "—"}
+            </p>
+
+            {/* Auteur */}
+            {current && (
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-black/5 text-xs font-medium">
+                  {(current.user_name?.[0] || "U").toUpperCase()}
+                </div>
+                <div className="text-xs">
+                  <p className="font-semibold text-[#0b0908]">
+                    {current.user_name ?? "Utilisateur"}
+                  </p>
+                  <p className="text-black/50">Critique de parfum</p>
+                </div>
               </div>
-            ) : reviews.length > 0 ? (
-              reviews.map((r) => {
-                const content =
-                  typeof r.comment !== "undefined" ? r.comment : r.text;
-                return (
-                  <div key={r.id} className="flex items-start mb-4">
-                    <div className="w-8 h-8 rounded-full border border-black flex items-center justify-center text-sm">
-                      {r.user_name?.charAt(0).toUpperCase() ?? "U"}
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <p className="font-semibold">
-                        {r.user_name ?? "Utilisateur"} — {r.rating}/5
-                      </p>
-                      {content && <p>{content}</p>}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-center text-sm text-gray-600">
-                Aucun avis pour le moment.
-              </p>
             )}
+          </motion.div>
+
+          {/* Dots + Arrows */}
+          <div className="mt-4 flex items-center justify-between">
+            {/* Dots */}
+            <div className="flex items-center gap-2">
+              {reviews.map((review, i) => (
+                <button
+                  type="button"
+                  key={review.id} // Use a unique identifier
+                  aria-label={`Aller à l’avis ${i + 1}`}
+                  onClick={() => setIndex(i)}
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    i === index ? "bg-black" : "bg-black/30"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Arrows */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={prev}
+                className="rounded-md border border-black/10 p-2 hover:bg-black/5"
+                aria-label="Précédent"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={next}
+                className="rounded-md border border-black/10 p-2 hover:bg-black/5"
+                aria-label="Suivant"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* bouton / formulaire */}
-      <div className="mt-4 text-right">
+      {/* Laisser un avis (optionnel) */}
+      <div className="mt-8 text-right">
         {!showForm ? (
           <motion.button
-            className="text-black underline text-sm"
+            className="text-sm underline underline-offset-4 hover:opacity-80"
             onClick={() => setShowForm(true)}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.04 }}
           >
             Laisser un avis…
           </motion.button>
@@ -192,9 +254,10 @@ const Review = ({ perfumeId }: Props) => {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleSubmit}
-              className="mt-4 bg-white p-4 rounded-lg border border-black"
+              className="mt-4 rounded-xl border border-black/15 bg-white p-4"
             >
-              <div className="flex justify-center mb-3">
+              {/* Stars input */}
+              <div className="mb-3 flex justify-center gap-1">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <motion.button
                     key={s}
@@ -202,14 +265,14 @@ const Review = ({ perfumeId }: Props) => {
                     onClick={() => setRating(s)}
                     onMouseEnter={() => setHoveredRating(s)}
                     onMouseLeave={() => setHoveredRating(0)}
-                    whileHover={{ scale: 1.2 }}
+                    whileHover={{ scale: 1.15 }}
                     aria-label={`Note ${s}`}
                   >
                     <Star
-                      className={`w-6 h-6 ${
+                      className={`h-6 w-6 ${
                         (hoveredRating || rating) >= s
-                          ? "text-yellow-500 fill-yellow-500"
-                          : "text-gray-400"
+                          ? "fill-black text-black"
+                          : "text-black/30"
                       }`}
                     />
                   </motion.button>
@@ -219,11 +282,11 @@ const Review = ({ perfumeId }: Props) => {
               <textarea
                 value={newReview}
                 onChange={(e) => setNewReview(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded min-h-[80px] focus:outline-none focus:border-black"
                 placeholder="Partagez votre expérience…"
+                className="min-h-[90px] w-full rounded-md border border-black/15 p-2 text-sm outline-none focus:ring-2 focus:ring-black/20"
               />
 
-              <div className="flex justify-end gap-2 mt-3">
+              <div className="mt-3 flex justify-end gap-2">
                 <motion.button
                   type="button"
                   onClick={() => {
@@ -231,18 +294,18 @@ const Review = ({ perfumeId }: Props) => {
                     setNewReview("");
                     setRating(0);
                   }}
-                  className="px-3 py-1 border border-gray-400 rounded text-sm"
-                  whileHover={{ scale: 1.05 }}
+                  className="rounded-md border border-black/20 px-3 py-1 text-sm"
+                  whileHover={{ scale: 1.03 }}
                 >
                   Annuler
                 </motion.button>
                 <motion.button
                   type="submit"
-                  className="px-3 py-1 bg-black text-white rounded text-sm"
-                  whileHover={{ scale: 1.05 }}
                   disabled={
                     !newReview.trim() || rating === 0 || !isAuthenticated
                   }
+                  className="rounded-md bg-black px-3 py-1 text-sm text-white disabled:opacity-50"
+                  whileHover={{ scale: 1.03 }}
                 >
                   Publier
                 </motion.button>
@@ -253,6 +316,4 @@ const Review = ({ perfumeId }: Props) => {
       </div>
     </section>
   );
-};
-
-export default Review;
+}

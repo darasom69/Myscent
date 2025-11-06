@@ -1,10 +1,9 @@
-// client/src/pages/Brand.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useBrandContext } from "../context/BrandContext";
 import { type Perfume, usePerfumeContext } from "../context/PerfumeContext";
 
-function Brand() {
+export default function Brand() {
   const { id } = useParams();
   const brandId = Number(id);
 
@@ -13,13 +12,13 @@ function Brand() {
 
   const [loading, setLoading] = useState(true);
 
-  // Marque
+  // ----- Marque courante
   const brand = useMemo(() => {
     if (!Number.isFinite(brandId)) return null;
     return getBrandById(brandId) ?? null;
   }, [brandId, getBrandById]);
 
-  // S’assurer que les parfums sont chargés
+  // ----- Charger parfums si besoin
   useEffect(() => {
     const ensure = async () => {
       setLoading(true);
@@ -34,13 +33,13 @@ function Brand() {
     void ensure();
   }, [perfumes, fetchPerfumes]);
 
-  // Parfums de la marque
+  // ----- Parfums de la marque
   const brandPerfumes: Perfume[] = useMemo(() => {
     if (!perfumes) return [];
     return perfumes.filter((p) => p.brand_id === brandId);
   }, [perfumes, brandId]);
 
-  // Petites stats pour l’encart (si dispo)
+  // ----- Stats / fallback texte
   const count = brandPerfumes.length;
   const years = brandPerfumes
     .map((p) => p.release_year)
@@ -74,81 +73,110 @@ function Brand() {
 
   return (
     <div className="min-h-screen bg-[#f4efe9]">
-      {/* Bandeau haut : logo à gauche, titre centré */}
-      <header className="max-w-6xl mx-auto px-6 pt-10">
-        <div className="grid grid-cols-3 items-center">
-          <div className="flex">
-            <img
-              src={brand.image_url ?? "/default-brand.png"}
-              alt={brand.name}
-              className="h-[60px] w-auto object-contain"
-            />
-          </div>
-          <h1 className="text-2xl text-center font-semibold">{brand.name}</h1>
-          <div /> {/* colonne vide pour équilibrer */}
-        </div>
-      </header>
-
-      {/* Encart descriptif bordé */}
-      <section className="max-w-3xl mx-auto mt-10 px-6">
-        <div className="border border-black bg-white/70 shadow px-6 py-6 text-center text-sm leading-6">
-          {brand.description ? (
-            <p className="whitespace-pre-line">{brand.description}</p>
-          ) : (
-            <>
-              <p>
-                {brand.name} compte <strong>{count}</strong> parfum
-                {count > 1 ? "s" : ""} listé{count > 1 ? "s" : ""} dans notre
-                encyclopédie olfactive.
-              </p>
-              {years.length >= 1 && (
-                <p>
-                  Créations de {minYear ?? ""}
-                  {minYear && maxYear && minYear !== maxYear
-                    ? ` à ${maxYear}`
-                    : ""}
-                  .
-                </p>
-              )}
-              <p className="text-gray-600 mt-2">
-                (Ajoute une description marque dans la base pour remplacer ce
-                texte.)
-              </p>
-            </>
-          )}
+      {/* ==== Bandeau top (titre + sous-titre) ==== */}
+      <section className="bg-[#e9dfd6]">
+        <div className="mx-auto max-w-6xl px-6 py-10 text-center">
+          <h1 className="font-display text-3xl md:text-4xl text-[#0b0908]">
+            Nos marques d&rsquo;exception
+          </h1>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-black/70">
+            Chaque marque raconte une histoire unique. Découvrez les créateurs
+            qui transforment les essences en poésie liquide.
+          </p>
         </div>
       </section>
 
-      {/* Titre Collection */}
-      <div className="max-w-6xl mx-auto px-6 mt-12">
-        <h2 className="text-center text-xl font-semibold">Collection</h2>
-      </div>
+      {/* ==== Bloc intro marque : texte à gauche / logo à droite ==== */}
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-start">
+          {/* Texte gauche */}
+          <div>
+            <h2 className="font-display text-2xl text-[#0b0908]">
+              {brand.name}
+            </h2>
+            <div className="mt-5 text-sm leading-6 text-[#1a1613]">
+              {brand.description ? (
+                <p className="whitespace-pre-line">{brand.description}</p>
+              ) : (
+                <>
+                  <p>
+                    {brand.name} compte <strong>{count}</strong> parfum
+                    {count > 1 ? "s" : ""} listé{count > 1 ? "s" : ""} dans
+                    notre encyclopédie olfactive.
+                  </p>
+                  {years.length >= 1 && (
+                    <p className="mt-2">
+                      La plus ancienne création répertoriée date de{" "}
+                      <strong>{minYear}</strong>
+                      {minYear && maxYear && minYear !== maxYear ? (
+                        <>
+                          {" "}
+                          et la plus récente de <strong>{maxYear}</strong>
+                        </>
+                      ) : null}
+                      .
+                    </p>
+                  )}
+                  <p className="mt-2 text-black/70">
+                    (Ajoute un texte de présentation pour cette marque dans la
+                    base afin de remplacer ce paragraphe.)
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
 
-      {/* Grille 3 colonnes, style Figma (image + nom en petit cartouche) */}
-      <section className="max-w-6xl mx-auto px-6 mt-6 pb-16">
+          {/* Logo droite */}
+          <div className="flex items-start justify-center md:justify-end">
+            <img
+              src={brand.image_url ?? "/default-brand.png"}
+              alt={brand.name}
+              className="h-[84px] w-auto object-contain"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ==== Titre “La collection” ==== */}
+      <section className="mx-auto max-w-6xl px-6">
+        <h3 className="text-center font-display text-2xl text-[#0b0908]">
+          La collection
+        </h3>
+      </section>
+
+      {/* ==== Grille produits (images homogènes + cartouche nom) ==== */}
+      <section className="mx-auto max-w-6xl px-6 pb-16 pt-8">
         {brandPerfumes.length === 0 ? (
           <div className="py-12 text-center text-gray-600">
             Aucun parfum répertorié pour cette marque.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-12">
+          <div
+            className="
+              grid grid-cols-1 gap-y-14
+              sm:grid-cols-2
+              lg:grid-cols-4
+            "
+          >
             {brandPerfumes.map((p) => (
               <Link
                 key={p.id}
                 to={`/parfum/${p.id}`}
                 className="group flex flex-col items-center"
               >
-                <div className="h-[220px] w-full max-w-[240px] border border-black bg-white flex items-center justify-center shadow-sm">
+                {/* Boîte visuelle à hauteur fixe pour uniformiser toutes les images */}
+                <div className="flex h-64 w-full max-w-[240px] items-center justify-center overflow-hidden rounded border border-black/10 bg-white shadow-sm">
                   <img
                     src={p.image_url ?? "/default-perfume.png"}
                     alt={p.name}
-                    className="max-h-[200px] object-contain p-3"
+                    className="max-h-[240px] w-auto object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
+                    loading="lazy"
                   />
                 </div>
 
-                {/* petit cartouche sous l’image */}
+                {/* Cartouche nom sous l’image */}
                 <div className="mt-3">
-                  <span className="inline-block text-xs border border-black px-3 py-1 bg-white group-hover:-translate-y-0.5 transition-transform">
+                  <span className="inline-block rounded border border-black/20 bg-white px-3 py-1 text-xs text-[#0b0908] transition-transform duration-300 group-hover:-translate-y-0.5">
                     {p.name}
                   </span>
                 </div>
@@ -159,7 +187,10 @@ function Brand() {
 
         {/* Lien retour */}
         <div className="mt-12 text-center">
-          <Link to="/" className="text-sm underline hover:opacity-80">
+          <Link
+            to="/"
+            className="text-sm underline underline-offset-4 hover:opacity-80"
+          >
             ← Retour
           </Link>
         </div>
@@ -167,5 +198,3 @@ function Brand() {
     </div>
   );
 }
-
-export default Brand;
